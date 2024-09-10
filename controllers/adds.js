@@ -10,7 +10,14 @@ addsRouter.get('/', async (req, res) => {
 
 addsRouter.get('/image', async (req, res) => {
     console.log("TOIMII");
-    const aiAnswer = await openAi.openAiImg();
+    const aiAnswer = await openAi.openAiNewImg();
+
+    res.json(aiAnswer);
+});
+
+addsRouter.get('/describe', async (req, res) => {
+    console.log("TOIMII");
+    const aiAnswer = await openAi.describeImg();
 
     res.json(aiAnswer);
 });
