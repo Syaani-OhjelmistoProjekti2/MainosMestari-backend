@@ -22,4 +22,11 @@ addsRouter.get('/describe', async (req, res) => {
     res.json(aiAnswer);
 });
 
+addsRouter.get('/imagevariation', async (req, res) => {
+    console.log("TOIMII");
+    const aiAnswer = await openAi.imgVariation();
+
+    res.json(aiAnswer);
+});
+
 module.exports = addsRouter;
