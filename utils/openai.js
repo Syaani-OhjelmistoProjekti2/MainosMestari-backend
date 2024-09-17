@@ -25,10 +25,10 @@ const openAiAd = async () => {
     return completion.choices[0].message;
 };
 
-const openAiImg = async () => {
+const openAiImg = async ({ prompt, imgPath }) => {
     const image = await openai.images.edit({ 
-        image: fs.createReadStream("sohva.png"),
-        prompt: "use the given sofa and make an ad from it. super realistic. tiktok ad. Put the sofa in a mountainhill",
+        image: fs.createReadStream(`controllers/uploads/${imgPath}`),
+        prompt: prompt,
     });
 
     return image.data;
