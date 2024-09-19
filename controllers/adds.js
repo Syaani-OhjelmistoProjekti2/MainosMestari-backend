@@ -34,16 +34,9 @@ addsRouter.post('/image', upload.single('img'), async (req, res) => {
 });
 
 
-addsRouter.get('/', async (req, res) => {
-    console.log("TOIMII");
-    const aiAnswer = await openAi.openAiAd();
-
-    res.json(aiAnswer);
-});
-
 addsRouter.get('/image', async (req, res) => {
     console.log("TOIMII");
-    const aiAnswer = await openAi.openAiImg();
+    const aiAnswer = await openAi.openAiNewImg();
 
     res.json(aiAnswer);
 });

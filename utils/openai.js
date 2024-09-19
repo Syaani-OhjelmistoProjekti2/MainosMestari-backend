@@ -8,23 +8,6 @@ const encodeImage = (imagePath) => {
     return image.toString('base64');
 };
 
-
-const openAiAd = async () => {
-
-    const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-            { role: "system", content: "You are a helpful assistant." },
-            {
-                role: "user",
-                content: "Anna lomakohde ehdotuksia.",
-            },
-        ],
-    });
-
-    return completion.choices[0].message;
-};
-
 const openAiImg = async ({ prompt, imgPath }) => {
     const image = await openai.images.edit({ 
         image: fs.createReadStream(`controllers/uploads/${imgPath}`),
@@ -80,4 +63,4 @@ const describeImg = async () => {
     return response;
 };
 
-module.exports = { openAiAd, openAiImg, openAiNewImg, describeImg, imgVariation };
+module.exports = { openAiImg, openAiNewImg, describeImg, imgVariation };
