@@ -3,6 +3,9 @@ const openAi = require('../utils/openai');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
+const axios = require('axios');
+const FormData = require('form-data');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -31,6 +34,34 @@ addsRouter.post('/image', upload.single('img'), async (req, res) => {
 
     res.json(aiAnswer);
     await fs.unlinkSync(`controllers/uploads/${imgPath}`); 
+});
+
+addsRouter.get('/stabilityimg', async (req, res) => {
+
+    console.log("TOIMII");
+
+    const payload = {
+        image: fs.createReadStream('sohva2.png'),
+        prompt: "make an advertisment for these sofas, put santaclauses admiring the sofas",
+        output_format: "jpeg"
+    }
+
+    const aiAnswer = await axios.postForm(
+        `https://api.stability.ai/v2beta/stable-image/edit/inpaint`,
+        axios.toFormData(payload, new FormData()),
+            {
+                validateStatus: undefined,
+                responseType: "arraybuffer",
+                headers: { 
+                    Authorization: `Bearer ${process.env.STABILITY_KEY}`, 
+                    Accept: "image/*",
+                },
+            },
+    );
+
+    fs.writeFileSync('controllers/uploads/output_image.png', Buffer.from(aiAnswer.data));
+
+    res.json(aiAnswer.data);
 });
 
 
