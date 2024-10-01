@@ -1,8 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const addsRouter = require('./controllers/adds');
+const morgan = require('morgan');
 
 const app = express();
+
+app.use(morgan('tiny'));
 
 app.use(cors());
 app.use(express.json());
