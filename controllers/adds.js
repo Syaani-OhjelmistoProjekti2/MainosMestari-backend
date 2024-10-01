@@ -43,7 +43,7 @@ addsRouter.get('/stabilityimg', async (req, res) => {
     const payload = {
         image: fs.createReadStream('sohva2.png'),
         prompt: "sofa on a countryside where a house is on fire",
-        output_format: "webp"
+        output_format: "png"
     }
 
     const aiAnswer = await axios.postForm(
@@ -87,11 +87,6 @@ addsRouter.get('/imagevariation', async (req, res) => {
     res.json(aiAnswer);
 });
 
-addsRouter.get('/imagemask', async (req, res) => {
-    console.log("TOIMII");
-    const aiAnswer = await openAi.imgMask();
 
-    res.json(aiAnswer);
-});
 
 module.exports = addsRouter;
