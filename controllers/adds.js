@@ -87,6 +87,11 @@ addsRouter.get('/imagevariation', async (req, res) => {
     res.json(aiAnswer);
 });
 
+addsRouter.get('/imagemask', async (req, res) => {
+    console.log("TOIMII");
+    const aiAnswer = await openAi.imgMask();
 
+    res.json(aiAnswer);
+});
 
 module.exports = addsRouter;
