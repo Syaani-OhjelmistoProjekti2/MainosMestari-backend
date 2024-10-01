@@ -62,7 +62,7 @@ addsRouter.get('/stabilityimg', async (req, res) => {
     fs.writeFileSync('controllers/uploads/output_image.png', Buffer.from(aiAnswer.data));
 
     const base64img = aiAnswer.data.toString('base64');
-    res.json(base64img);
+    res.json({ data:base64img });
 });
 
 
@@ -87,11 +87,6 @@ addsRouter.get('/imagevariation', async (req, res) => {
     res.json(aiAnswer);
 });
 
-addsRouter.get('/imagemask', async (req, res) => {
-    console.log("TOIMII");
-    const aiAnswer = await openAi.imgMask();
 
-    res.json(aiAnswer);
-});
 
 module.exports = addsRouter;
