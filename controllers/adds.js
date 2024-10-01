@@ -42,8 +42,8 @@ addsRouter.get('/stabilityimg', async (req, res) => {
 
     const payload = {
         image: fs.createReadStream('sohva2.png'),
-        prompt: "make an advertisment for these sofas, put santaclauses admiring the sofas",
-        output_format: "jpeg"
+        prompt: "sofa on a countryside where a house is on fire",
+        output_format: "webp"
     }
 
     const aiAnswer = await axios.postForm(
@@ -61,7 +61,8 @@ addsRouter.get('/stabilityimg', async (req, res) => {
 
     fs.writeFileSync('controllers/uploads/output_image.png', Buffer.from(aiAnswer.data));
 
-    res.json(aiAnswer.data);
+    const base64img = aiAnswer.data.toString('base64');
+    res.json(base64img);
 });
 
 
