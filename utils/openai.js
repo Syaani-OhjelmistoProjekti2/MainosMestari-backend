@@ -76,4 +76,4 @@ const imgMask = async () => {
   return image_url;
 };
 
-module.exports = { openAiAd, openAiImg, openAiNewImg, describeImg, imgVariation, imgMask };
+module.exports = { openAiImg, openAiNewImg, describeImg, imgVariation, imgMask };
