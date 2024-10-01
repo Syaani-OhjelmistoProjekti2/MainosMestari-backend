@@ -62,7 +62,7 @@ addsRouter.get('/stabilityimg', async (req, res) => {
     fs.writeFileSync('controllers/uploads/output_image.png', Buffer.from(aiAnswer.data));
 
     const base64img = aiAnswer.data.toString('base64');
-    res.json(base64img);
+    res.json({ data:base64img });
 });
 
 
