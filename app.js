@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const addsRouter = require('./controllers/adds');
+const adsRouter = require('./controllers/ads');
 const morgan = require('morgan');
 
 const app = express();
@@ -12,6 +12,6 @@ app.use(morgan('tiny'));
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/adds', addsRouter);
+app.use('/api/ads', adsRouter);
 
 module.exports = app;
