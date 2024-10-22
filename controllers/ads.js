@@ -8,6 +8,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 const stabilityai = require('../utils/stabilityai');
 const { response } = require('express');
+const sharp = require('sharp');
 
 const storage = multer.diskStorage({
     // Määritetään kohdekansio, johon tiedostot tallennetaan
@@ -91,6 +92,43 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
         // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt-muuttuja
         const imgPath = req.filename;
         const prompt = req.body.prompt;
+        const imgMaskPath = 'mask_image.png';
+        console.log(req.filename)
+
+        await sharp(`controllers/uploads/${imgPath}`)
+            .withMetadata({ orientation: undefined })
+            .resize(1350, 1080)
+            .toFile(`controllers/mask/${req.filename}`)
+
+        const aiMask = await stabilityai.stabilitymask({ imgPath });
+        fs.writeFileSync('controllers/uploads/mask_image.png', Buffer.from(aiMask.data));
+
+        const stabilityimg = await stabilityai.stabilityimg({ prompt, imgMaskPath });
+        const base64img = stabilityimg.data.toString('base64');
+        res.json({ data: base64img });
+
+    } catch (error) {
+        // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
+        console.error('Error processing image:', error);
+        res.status(500).json({ error: 'Image processing failed' });
+    } finally {
+        // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
+        try {
+            await fs.unlinkSync('controllers/uploads/mask_image.png');
+            await fs.unlinkSync(`controllers/mask/${req.filename}`);
+            await fs.unlinkSync("controllers/uploads/" + req.filename);
+        } catch (unlinkError) {
+            console.error('Error removing image file:', unlinkError);
+        }
+    }
+});
+
+// POST metodi Stability.ai:n inpaintin käyttöön
+/* adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
+    try {
+        // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt-muuttuja
+        const imgPath = req.filename;
+        const prompt = req.body.prompt;
 
         // Lähetetään kuva ja prompt Stability AI -palveluun
         const stabilityimg = await stabilityai.stabilityimg({ prompt, imgPath });
@@ -112,7 +150,7 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
             console.error('Error removing image file:', unlinkError);
         }
     }
-});
+}); */
 
 // Alla olevat on teistailuun, ei käytetä apissa
 
