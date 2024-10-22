@@ -6,7 +6,8 @@ const fs = require('fs');
 require('dotenv').config();
 const axios = require('axios');
 const FormData = require('form-data');
-const stabilityai = require('../utils/stabilityai')
+const stabilityai = require('../utils/stabilityai');
+const { response } = require('express');
 
 const storage = multer.diskStorage({
     // Määritetään kohdekansio, johon tiedostot tallennetaan
@@ -136,12 +137,41 @@ adsRouter.get('/imagevariation', async (req, res) => {
     res.json(aiAnswer);
 });
 
+adsRouter.get('/stabilitymask', async (req, res) => {
+
+    console.log("TOIMII");
+
+    const payload = {
+        image: fs.createReadStream('picture2.jpeg'),
+        output_format: "png"
+    }
+
+    const aiMask = await axios.postForm(
+        `https://api.stability.ai/v2beta/stable-image/edit/remove-background`,
+        axios.toFormData(payload, new FormData()),
+        {
+            validateStatus: undefined,
+            responseType: "arraybuffer",
+            headers: {
+                Authorization: `Bearer ${process.env.STABILITY_KEY}`,
+                Accept: "image/*"
+            },
+        },
+    );
+
+    fs.writeFileSync('controllers/uploads/mask_image.png', Buffer.from(aiMask.data));
+
+    const base64img = aiMask.data.toString('base64');
+    res.json({ data: base64img });
+
+});
+
 adsRouter.get('/stabilityimg', async (req, res) => {
 
     console.log("TOIMII");
 
     const payload = {
-        image: fs.createReadStream('sohva2.png'),
+        image: fs.createReadStream('controllers/uploads/mask_image.png'),
         prompt: "sofa on a countryside where a house is on fire",
         output_format: "png"
     }

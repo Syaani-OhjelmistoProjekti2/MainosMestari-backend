@@ -1,0 +1,1 @@
+{"errors":["image: unsupported dimensions - must be at least 4,096 pixels and at most 4,194,304 pixels, received 12,192,768 pixels"],"id":"c87ab2a3a06a0a16fef8f0bab698b6d2","name":"bad_request"}
