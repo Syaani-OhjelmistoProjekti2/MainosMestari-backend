@@ -3,10 +3,10 @@ const fs = require('fs');
 require('dotenv').config();
 const FormData = require('form-data');
 
-const stabilityimg = async ({ prompt, imgPath }) => {
+const stabilityimg = async ({ prompt, imgMaskPath }) => {
 
     const payload = {
-        image: fs.createReadStream(`controllers/uploads/${imgPath}`),
+        image: fs.createReadStream(`controllers/uploads/${imgMaskPath}`),
         prompt: prompt,
         output_format: "png"
     }
@@ -27,4 +27,27 @@ const stabilityimg = async ({ prompt, imgPath }) => {
     return aiAnswer;
 };
 
-module.exports = { stabilityimg };
+const stabilitymask = async ({ imgPath }) => {
+
+    const payload = {
+        image: fs.createReadStream(`controllers/mask/${imgPath}`),
+        output_format: "png"
+    }
+
+    const aiMask = await axios.postForm(
+        `https://api.stability.ai/v2beta/stable-image/edit/remove-background`,
+        axios.toFormData(payload, new FormData()),
+        {
+            validateStatus: undefined,
+            responseType: "arraybuffer",
+            headers: {
+                Authorization: `Bearer ${process.env.STABILITY_KEY}`,
+                Accept: "image/*"
+            },
+        },
+    );
+
+    return aiMask;
+}
+
+module.exports = { stabilityimg, stabilitymask };
