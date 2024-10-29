@@ -89,6 +89,8 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
         // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
         const imgPath = req.filename;
         const prompt = req.body.prompt;
+        const isAdText = req.body.isAdText;
+        console.log(isAdText);
 
         // Luodaan syöte- ja tulostevirtastreamit kuvan käsittelyä varten
         const inputStream = fs.createReadStream(`controllers/uploads/${imgPath}`);
@@ -106,9 +108,17 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
                 // Kutsutaan Stability.ai:ta uuden kuvan luomiseksi käyttäjän syöttämän promptin ja maskin perusteella
                 const stabilityimg = await stabilityai.stabilityimg({ prompt, imgPath });
                 const base64img = stabilityimg.data.toString('base64');
+                
+                if (isAdText === "true") {
+                    console.log("isAdText")
+                    const description = await openAi.describeImg({ imgPath });
+                    const adText = await openAi.createAdText({ description });
 
-                // Lähetetään Stability.ai:n vastaus asiakkaalle JSON-muodossa
-                res.json({ data: base64img });
+                    res.json({ data: base64img, adText: adText });
+                } else {
+                    // Lähetetään Stability.ai:n vastaus asiakkaalle JSON-muodossa
+                    res.json({ data: base64img });
+                }
 
                 // Poistetaan väliaikaiset tiedostot palvelimelta
                 await fs.promises.unlink(`controllers/mask/${imgPath}`).catch(e => console.error(e));
