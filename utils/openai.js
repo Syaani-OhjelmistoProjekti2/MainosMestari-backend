@@ -61,18 +61,17 @@ const describeImg = async ({ imgPath }) => {
   return response.choices[0].message.content;
 };
 
-const createAdText = async ({ description }) => {
+const createAdText = async ({ description, viewPoint }) => {
   adText = await openai.chat.completions.create({
     model: "gpt-4o",
-    message: [
+    messages: [
       { role: "system", content: "You are advertiser."},
       {
         role: "user",
-        content: `Write a advertisment text from this furniture description: ${description}`
+        content: `Write a advertisment text for used furniture from this viewpont: ${viewPoint}. And from this furniture description: ${description} write the advertisment text in finnish and it should be short`
       },
     ],
   });
-  console.log(adText.choices[0].message);
   return adText.choices[0].message;
 };
 

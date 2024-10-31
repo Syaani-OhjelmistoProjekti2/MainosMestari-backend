@@ -101,34 +101,41 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
             .pipe(sharp().withMetadata({ orientation: undefined }).resize(1350, 1080))
             .pipe(outputStream)
             .on('finish', async () => {
-                // Kutsutaan Stability.ai:ta maskin luomiseksi ladatusta kuvasta
-                const aiMask = await stabilityai.stabilitymask({ imgPath });
-                fs.writeFileSync(`controllers/uploads/${imgPath}`, Buffer.from(aiMask.data));
+                try {
+                    // Kutsutaan Stability.ai:ta maskin luomiseksi ladatusta kuvasta
+                    const aiMask = await stabilityai.stabilitymask({ imgPath });
+                    fs.writeFileSync(`controllers/uploads/${imgPath}`, Buffer.from(aiMask.data));
 
-                // Kutsutaan Stability.ai:ta uuden kuvan luomiseksi käyttäjän syöttämän promptin ja maskin perusteella
-                const stabilityimg = await stabilityai.stabilityimg({ prompt, imgPath });
-                const base64img = stabilityimg.data.toString('base64');
-                
-                if (isAdText === "true") {
-                    console.log("isAdText")
-                    const description = await openAi.describeImg({ imgPath });
-                    const adText = await openAi.createAdText({ description });
+                    // Kutsutaan Stability.ai:ta uuden kuvan luomiseksi käyttäjän syöttämän promptin ja maskin perusteella
+                    const stabilityimg = await stabilityai.stabilityimg({ prompt, imgPath });
+                    const base64img = stabilityimg.data.toString('base64');
+                    
+                    if (isAdText === "true") {
+                        const viewPoint = req.body.viewPoint;
+                        const description = await openAi.describeImg({ imgPath });
+                        const adText = await openAi.createAdText({ description, viewPoint });
+                        // Lähetetään Stability.ai:n ja openAi:n vastaus asiakkaalle JSON-muodossa
+                        res.json({ data: base64img, adText: adText.content });
+                    } else {
+                        // Lähetetään Stability.ai:n vastaus asiakkaalle JSON-muodossa
+                        res.json({ data: base64img });
+                    }
 
-                    res.json({ data: base64img, adText: adText });
-                } else {
-                    // Lähetetään Stability.ai:n vastaus asiakkaalle JSON-muodossa
-                    res.json({ data: base64img });
+                } catch (error) {
+                    // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
+                    console.error('Error processing image:', error);
+                    res.status(500).json({ error: 'Image processing failed' });
+                } finally {
+                    // Poistetaan väliaikaiset tiedostot palvelimelta
+                    await fs.promises.unlink(`controllers/mask/${imgPath}`).catch(e => console.error(e));
+                    await fs.promises.unlink(`controllers/uploads/${imgPath}`).catch(e => console.error(e));
                 }
-
-                // Poistetaan väliaikaiset tiedostot palvelimelta
-                await fs.promises.unlink(`controllers/mask/${imgPath}`).catch(e => console.error(e));
-                await fs.promises.unlink(`controllers/uploads/${imgPath}`).catch(e => console.error(e));
             })
     } catch (error) {
         // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
         console.error('Error processing image:', error);
         res.status(500).json({ error: 'Image processing failed' });
-    }
+    } 
 });
 
 // POST metodi Stability.ai:n inpaintin käyttöön
