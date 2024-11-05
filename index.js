@@ -7,6 +7,7 @@ const path = require('path');
 
 // Lisää tämä: frontend buildin tarjoilu
 app.use(express.static(path.join(__dirname, '/dist')));
+console.log("test")
 
 const PORT = process.env.PORT || 8080;
 
