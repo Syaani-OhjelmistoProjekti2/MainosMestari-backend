@@ -87,6 +87,8 @@ adsRouter.post('/dall3image', upload.single('img'), async (req, res) => {
 adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
     try {
         // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
+
+        console.log("Post method request")
         const imgPath = req.filename;
         const prompt = req.body.prompt;
         const isAdText = req.body.isAdText;
@@ -101,6 +103,7 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
             .pipe(sharp().withMetadata({ orientation: undefined }).resize(1350, 1080))
             .pipe(outputStream)
             .on('finish', async () => {
+                console.log("Pipe entered")
                 try {
                     // Kutsutaan Stability.ai:ta maskin luomiseksi ladatusta kuvasta
                     const aiMask = await stabilityai.stabilitymask({ imgPath });

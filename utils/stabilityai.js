@@ -3,6 +3,8 @@ const fs = require('fs');
 require('dotenv').config();
 const FormData = require('form-data');
 
+const stabilityAiKey = process.env.STABILITY_KEY_API
+
 const stabilityimg = async ({ prompt, imgPath }) => {
 
     const payload = {
@@ -18,7 +20,7 @@ const stabilityimg = async ({ prompt, imgPath }) => {
                 validateStatus: undefined,
                 responseType: "arraybuffer",
                 headers: { 
-                    Authorization: `Bearer ${process.env.STABILITY_KEY}`, 
+                    Authorization: `Bearer ${stabilityAiKey}`, 
                     Accept: "image/*",
                 },
             },
@@ -28,6 +30,8 @@ const stabilityimg = async ({ prompt, imgPath }) => {
 };
 
 const stabilitymask = async ({ imgPath }) => {
+
+    console.log("mask operation started")
 
     const payload = {
         image: fs.createReadStream(`controllers/mask/${imgPath}`),
@@ -41,7 +45,7 @@ const stabilitymask = async ({ imgPath }) => {
             validateStatus: undefined,
             responseType: "arraybuffer",
             headers: {
-                Authorization: `Bearer ${process.env.STABILITY_KEY}`,
+                Authorization: `Bearer ${stabilityAiKey}`,
                 Accept: "image/*"
             },
         },
