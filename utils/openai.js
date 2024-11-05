@@ -1,7 +1,11 @@
 const OpenAI = require("openai");
 const fs = require('fs');
 require('dotenv').config();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+
+const openAIKey = process.env.OPENAI_KEY;
+console.log(openAIKey);
+
+const openai = new OpenAI({ apiKey: openAIKey});
 
 const encodeImage = (imagePath) => {
   const image = fs.readFileSync(imagePath);
