@@ -39,9 +39,7 @@ const imgVariation = async () => {
 }
 
 const describeImg = async ({ imgPath }) => {
-
   const base64Image = encodeImage(`controllers/uploads/${imgPath}`);
-
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -63,6 +61,20 @@ const describeImg = async ({ imgPath }) => {
   return response.choices[0].message.content;
 };
 
+const createAdText = async ({ description, viewPoint }) => {
+  adText = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: "You are advertiser."},
+      {
+        role: "user",
+        content: `Write a advertisment text for used furniture from this viewpont: ${viewPoint}. And from this furniture description: ${description} write the advertisment text in finnish and it should be short`
+      },
+    ],
+  });
+  return adText.choices[0].message;
+};
+
 const imgMask = async () => {
   const response = await openai.images.edit({
     model: "dall-e-2",
@@ -76,4 +88,4 @@ const imgMask = async () => {
   return image_url;
 };
 
-module.exports = { openAiImg, openAiNewImg, describeImg, imgVariation, imgMask };
+module.exports = { openAiImg, openAiNewImg, describeImg, imgVariation, imgMask, createAdText };

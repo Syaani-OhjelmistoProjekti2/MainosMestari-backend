@@ -3,10 +3,10 @@ const fs = require('fs');
 require('dotenv').config();
 const FormData = require('form-data');
 
-const stabilityimg = async ({ prompt, imgMaskPath }) => {
+const stabilityimg = async ({ prompt, imgPath }) => {
 
     const payload = {
-        image: fs.createReadStream(`controllers/uploads/${imgMaskPath}`),
+        image: fs.createReadStream(`controllers/uploads/${imgPath}`),
         prompt: prompt,
         output_format: "png"
     }

@@ -7,8 +7,8 @@ require('dotenv').config();
 const axios = require('axios');
 const FormData = require('form-data');
 const stabilityai = require('../utils/stabilityai');
-const { response } = require('express');
 const sharp = require('sharp');
+const { randomFilePath } = require('../helpers/randomFilePath');
 
 const storage = multer.diskStorage({
     // Määritetään kohdekansio, johon tiedostot tallennetaan
@@ -17,10 +17,7 @@ const storage = multer.diskStorage({
     },
     // Määritetään tiedostonimi tallennuksen aikana
     filename: (req, file, cb) => {
-        // Luodaan ainutlaatuinen tunniste tiedoston nimeen käyttämällä aikaleimaa ja satunnaista numeroa
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        // Luodaan tiedostonimi, johon lisätään alkuperäisen tiedoston laajennus
-        const filename = 'image-' + uniqueSuffix + path.extname(file.originalname);
+        const filename = randomFilePath(file);
 
         req.filename = filename; // Tallennetaan luotu tiedostonimi request-objektiin// Tallennetaan luotu tiedostonimi request-objektiin
 
@@ -89,38 +86,56 @@ adsRouter.post('/dall3image', upload.single('img'), async (req, res) => {
 // POST metodi Stability.ai:n inpaintin käyttöön
 adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
     try {
-        // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt-muuttuja
+        // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
         const imgPath = req.filename;
         const prompt = req.body.prompt;
-        const imgMaskPath = 'mask_image.png';
-        console.log(req.filename)
+        const isAdText = req.body.isAdText;
+        console.log(isAdText);
 
-        await sharp(`controllers/uploads/${imgPath}`)
-            .withMetadata({ orientation: undefined })
-            .resize(1350, 1080)
-            .toFile(`controllers/mask/${req.filename}`)
+        // Luodaan syöte- ja tulostevirtastreamit kuvan käsittelyä varten
+        const inputStream = fs.createReadStream(`controllers/uploads/${imgPath}`);
+        const outputStream = fs.createWriteStream(`controllers/mask/${imgPath}`);
 
-        const aiMask = await stabilityai.stabilitymask({ imgPath });
-        fs.writeFileSync('controllers/uploads/mask_image.png', Buffer.from(aiMask.data));
+        // Käsitellään kuva ja muutetaan sen kokoa ennen maskeerausta
+        inputStream
+            .pipe(sharp().withMetadata({ orientation: undefined }).resize(1350, 1080))
+            .pipe(outputStream)
+            .on('finish', async () => {
+                try {
+                    // Kutsutaan Stability.ai:ta maskin luomiseksi ladatusta kuvasta
+                    const aiMask = await stabilityai.stabilitymask({ imgPath });
+                    fs.writeFileSync(`controllers/uploads/${imgPath}`, Buffer.from(aiMask.data));
 
-        const stabilityimg = await stabilityai.stabilityimg({ prompt, imgMaskPath });
-        const base64img = stabilityimg.data.toString('base64');
-        res.json({ data: base64img });
+                    // Kutsutaan Stability.ai:ta uuden kuvan luomiseksi käyttäjän syöttämän promptin ja maskin perusteella
+                    const stabilityimg = await stabilityai.stabilityimg({ prompt, imgPath });
+                    const base64img = stabilityimg.data.toString('base64');
+                    
+                    if (isAdText === "true") {
+                        const viewPoint = req.body.viewPoint;
+                        const description = await openAi.describeImg({ imgPath });
+                        const adText = await openAi.createAdText({ description, viewPoint });
+                        // Lähetetään Stability.ai:n ja openAi:n vastaus asiakkaalle JSON-muodossa
+                        res.json({ data: base64img, adText: adText.content });
+                    } else {
+                        // Lähetetään Stability.ai:n vastaus asiakkaalle JSON-muodossa
+                        res.json({ data: base64img });
+                    }
 
+                } catch (error) {
+                    // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
+                    console.error('Error processing image:', error);
+                    res.status(500).json({ error: 'Image processing failed' });
+                } finally {
+                    // Poistetaan väliaikaiset tiedostot palvelimelta
+                    await fs.promises.unlink(`controllers/mask/${imgPath}`).catch(e => console.error(e));
+                    await fs.promises.unlink(`controllers/uploads/${imgPath}`).catch(e => console.error(e));
+                }
+            })
     } catch (error) {
         // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
         console.error('Error processing image:', error);
         res.status(500).json({ error: 'Image processing failed' });
-    } finally {
-        // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
-        try {
-            await fs.unlinkSync('controllers/uploads/mask_image.png');
-            await fs.unlinkSync(`controllers/mask/${req.filename}`);
-            await fs.unlinkSync("controllers/uploads/" + req.filename);
-        } catch (unlinkError) {
-            console.error('Error removing image file:', unlinkError);
-        }
-    }
+    } 
 });
 
 // POST metodi Stability.ai:n inpaintin käyttöön
