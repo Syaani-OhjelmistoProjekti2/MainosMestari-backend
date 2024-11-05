@@ -18,7 +18,7 @@ const stabilityimg = async ({ prompt, imgPath }) => {
                 validateStatus: undefined,
                 responseType: "arraybuffer",
                 headers: { 
-                    Authorization: `Bearer ${process.env.STABILITY_KEY}`, 
+                    Authorization: `Bearer ${STABILITY_KEY}`, 
                     Accept: "image/*",
                 },
             },
@@ -41,7 +41,7 @@ const stabilitymask = async ({ imgPath }) => {
             validateStatus: undefined,
             responseType: "arraybuffer",
             headers: {
-                Authorization: `Bearer ${process.env.STABILITY_KEY}`,
+                Authorization: `Bearer ${STABILITY_KEY}`,
                 Accept: "image/*"
             },
         },
