@@ -3,7 +3,6 @@ const fs = require('fs');
 require('dotenv').config();
 
 const openAIKey = process.env.OPENAI_KEY_API;
-console.log(openAIKey);
 
 const openai = new OpenAI({ apiKey: openAIKey});
 
@@ -42,8 +41,9 @@ const imgVariation = async () => {
   return image_url;
 }
 
-const describeImg = async ({ imgPath }) => {
-  const base64Image = encodeImage(`controllers/uploads/${imgPath}`);
+const describeImg = async ({ imgBuffer }) => {
+  console.log(imgBuffer)
+  const base64img = imgBuffer.toString('base64');
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
@@ -54,7 +54,7 @@ const describeImg = async ({ imgPath }) => {
           {
             type: "image_url",
             image_url: {
-              "url": `data:image/png;base64,${base64Image}`,
+              "url": `data:image/png;base64,${base64img}`,
             },
           },
         ],

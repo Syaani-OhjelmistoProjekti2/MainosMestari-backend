@@ -10,21 +10,7 @@ const stabilityai = require('../utils/stabilityai');
 const sharp = require('sharp');
 const { randomFilePath } = require('../helpers/randomFilePath');
 
-const storage = multer.diskStorage({
-    // Määritetään kohdekansio, johon tiedostot tallennetaan
-    destination: (req, file, cb) => {
-        cb(null, 'controllers/uploads');
-    },
-    // Määritetään tiedostonimi tallennuksen aikana
-    filename: (req, file, cb) => {
-        const filename = randomFilePath(file);
-
-        req.filename = filename; // Tallennetaan luotu tiedostonimi request-objektiin// Tallennetaan luotu tiedostonimi request-objektiin
-
-        cb(null, filename); // Palautetaan luotu tiedostonimi
-    }
-});
-
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // POST metodi openAi:n dall-E 2 käyttöön
@@ -88,44 +74,39 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
 
     console.log("Post method request");
 
-    const imgPath = req.filename;
+    const imgBuffer = req.file.buffer;
     const prompt = req.body.prompt;
     const isAdText = req.body.isAdText;
 
     try {
-
-        const inputPath = `controllers/uploads/${imgPath}`;
-        const maskPath = `controllers/mask/${imgPath}`;
-
         // Asynkroninen kuvan muokkaus ja tallennus
-        await sharp(inputPath)
+        const resizedBuffer = await sharp(imgBuffer)
             .withMetadata({ orientation: undefined })
             .resize(1350, 1080)
-            .toFile(maskPath);
+            .toBuffer();
 
-        // Käsittele Stability.ai ja OpenAI-kutsut rinnakkain
-        const aiMask = await stabilityai.stabilitymask({ imgPath });
-        fs.writeFileSync(inputPath, Buffer.from(aiMask.data));
+        const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
 
-        const stabilityimg = await stabilityai.stabilityimg({ prompt, imgPath });
+        const stabilityimg = await stabilityai.stabilityimg({ prompt, aiMask });
         const base64img = stabilityimg.data.toString('base64');
-
-        if (isAdText === "true") {
-            const viewPoint = req.body.viewPoint;
-            const description = await openAi.describeImg({ imgPath });
-            const adText = await openAi.createAdText({ description, viewPoint });
-            res.json({ data: base64img, adText: adText.content });
-        } else {
-            res.json({ data: base64img });
-        }
+        res.json({ data: base64img });
 
     } catch (error) {
         console.error('Error processing image:', error);
         res.status(500).json({ error: 'Image processing failed' });
-    } finally {
-        // Poista tiedostot heti, kun niitä ei enää tarvita
-        await fs.promises.unlink(`controllers/mask/${imgPath}`).catch(console.error);
-        await fs.promises.unlink(`controllers/uploads/${imgPath}`).catch(console.error);
+    };
+});
+
+adsRouter.post('/getadtext', upload.single('img'), async (req, res) => {
+    const imgBuffer = req.file.buffer;
+    const viewPoint = req.body.viewPoint;
+    try {
+        const description = await openAi.describeImg({ imgBuffer });
+        const adText = await openAi.createAdText({ description, viewPoint });
+        res.json({ adText: adText.content })
+    } catch (error) {
+        console.error('Error processing image:', error);
+        res.status(500).json({ error: 'Image processing failed' });
     }
 });
 

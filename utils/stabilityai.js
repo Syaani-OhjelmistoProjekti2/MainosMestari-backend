@@ -5,42 +5,16 @@ const FormData = require('form-data');
 
 const stabilityAiKey = process.env.STABILITY_KEY_API
 
-const stabilityimg = async ({ prompt, imgPath }) => {
+const stabilityimg = async ({ prompt, aiMask }) => {
 
-    const payload = {
-        image: fs.createReadStream(`controllers/uploads/${imgPath}`),
-        prompt: prompt,
-        output_format: "png"
-    }
+    const formData = new FormData();
+    formData.append('image', aiMask, { filename: 'image.png' });
+    formData.append('prompt', prompt);
+    formData.append('output_format', 'png');
 
     const aiAnswer = await axios.postForm(
         `https://api.stability.ai/v2beta/stable-image/edit/inpaint`,
-        axios.toFormData(payload, new FormData()),
-            {
-                validateStatus: undefined,
-                responseType: "arraybuffer",
-                headers: { 
-                    Authorization: `Bearer ${stabilityAiKey}`, 
-                    Accept: "image/*",
-                },
-            },
-    );
-
-    return aiAnswer;
-};
-
-const stabilitymask = async ({ imgPath }) => {
-
-    console.log("mask operation started")
-
-    const payload = {
-        image: fs.createReadStream(`controllers/mask/${imgPath}`),
-        output_format: "png"
-    }
-
-    const aiMask = await axios.postForm(
-        `https://api.stability.ai/v2beta/stable-image/edit/remove-background`,
-        axios.toFormData(payload, new FormData()),
+        formData,
         {
             validateStatus: undefined,
             responseType: "arraybuffer",
@@ -51,7 +25,31 @@ const stabilitymask = async ({ imgPath }) => {
         },
     );
 
-    return aiMask;
+    return aiAnswer;
+};
+
+const stabilitymask = async ({ resizedBuffer }) => {
+
+    console.log("mask operation started")
+
+    const formData = new FormData();
+    formData.append('image', resizedBuffer, { filename: 'image.png' });
+    formData.append('output_format', 'png');
+
+    const aiMask = await axios.postForm(
+        `https://api.stability.ai/v2beta/stable-image/edit/remove-background`,
+        formData,
+        {
+            validateStatus: undefined,
+            responseType: "arraybuffer",
+            headers: {
+                Authorization: `Bearer ${stabilityAiKey}`,
+                Accept: "image/*"
+            },
+        },
+    );
+
+    return aiMask.data;
 }
 
 module.exports = { stabilityimg, stabilitymask };
