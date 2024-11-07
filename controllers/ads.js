@@ -1,19 +1,80 @@
 const adsRouter = require('express').Router();
 const openAi = require('../utils/openai');
 const multer = require('multer');
-const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
-const axios = require('axios');
-const FormData = require('form-data');
 const stabilityai = require('../utils/stabilityai');
 const sharp = require('sharp');
-const { randomFilePath } = require('../helpers/randomFilePath');
 
+// Set up memory storage for multer (used for handling file uploads)
 const storage = multer.memoryStorage();
+// Create an upload middleware using the memory storage
 const upload = multer({ storage: storage });
 
-// POST metodi openAi:n dall-E 2 käyttöön
+// POST method for Stability.ai's inpaint
+adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
+
+    // Log the request to the console
+    console.log("Post method request: /stabilityimg");
+
+    // Get the image buffer from the uploaded file
+    const imgBuffer = req.file.buffer;
+    // Get the prompt from the request body
+    const prompt = req.body.prompt;
+
+    try {
+        // Asynchronously resize the image and store it in a buffer
+        const resizedBuffer = await sharp(imgBuffer)
+            .withMetadata({ orientation: undefined }) // Remove orientation metadata
+            .resize(1350, 1080) // Resize the image to 1350x1080
+            .toBuffer();  // Convert the image to a buffer
+
+        // Generate an AI mask using the resized image buffer
+        const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
+
+        // Generate a new image using the prompt and AI mask
+        const stabilityimg = await stabilityai.stabilityimg({ prompt, aiMask });
+        // Convert the generated image to a base64 string
+        const base64img = stabilityimg.data.toString('base64');
+        // Send the base64 image as a JSON response
+        res.json({ data: base64img });
+
+    } catch (error) {
+        // Log any errors to the console
+        console.error('Error processing image:', error);
+        // Send a 500 error response if image processing fails
+        res.status(500).json({ error: 'Image processing failed' });
+    };
+});
+
+// POST method for OpenAi's text generation
+adsRouter.post('/getadtext', upload.single('img'), async (req, res) => {
+    // Log the request to the console
+    console.log("Post method request: /getadtext");
+
+    // Get the image buffer from the uploaded file
+    const imgBuffer = req.file.buffer;
+    // Get the view points from the request body
+    const viewPoints = req.body.viewPoints;
+    console.log(viewPoints)
+    try {
+        // Describe the image using OpenAI
+        const description = await openAi.describeImg({ imgBuffer });
+        // Create ad text using the image description and view points
+        const adText = await openAi.createAdText({ description, viewPoints });
+        // Send the generated ad text as a JSON response
+        res.json({ adText: adText.content })
+    } catch (error) {
+        // Log any errors to the console
+        console.error('Error processing image:', error);
+        // Send a 500 error response if image processing fails
+        res.status(500).json({ error: 'Image processing failed' });
+    }
+});
+
+
+
+// POST metodi openAi:n dall-E 2 käyttöön !!Removed from forntend!!
 adsRouter.post('/dall2image', upload.single('img'), async (req, res) => {
 
     try {
@@ -40,7 +101,7 @@ adsRouter.post('/dall2image', upload.single('img'), async (req, res) => {
     }
 });
 
-// POST metodi openAi:n dall-E 3 käyttöön
+// POST metodi openAi:n dall-E 3 käyttöön !!Removed from forntend!!
 adsRouter.post('/dall3image', upload.single('img'), async (req, res) => {
     try {
         // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
@@ -69,130 +130,6 @@ adsRouter.post('/dall3image', upload.single('img'), async (req, res) => {
     }
 });
 
-// POST metodi Stability.ai:n inpaintin käyttöön
-adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
-
-    console.log("Post method request: /stabilityimg");
-
-    const imgBuffer = req.file.buffer;
-    const prompt = req.body.prompt;
-
-    try {
-        // Asynkroninen kuvan muokkaus ja tallennus
-        const resizedBuffer = await sharp(imgBuffer)
-            .withMetadata({ orientation: undefined })
-            .resize(1350, 1080)
-            .toBuffer();
-
-        const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
-
-        const stabilityimg = await stabilityai.stabilityimg({ prompt, aiMask });
-        const base64img = stabilityimg.data.toString('base64');
-        res.json({ data: base64img });
-
-    } catch (error) {
-        console.error('Error processing image:', error);
-        res.status(500).json({ error: 'Image processing failed' });
-    };
-});
-
-adsRouter.post('/getadtext', upload.single('img'), async (req, res) => {
-
-    console.log("Post method request: /getadtext");
-
-    const imgBuffer = req.file.buffer;
-    const viewPoints = req.body.viewPoints;
-    console.log(viewPoints)
-    try {
-        const description = await openAi.describeImg({ imgBuffer });
-        const adText = await openAi.createAdText({ description, viewPoints });
-        res.json({ adText: adText.content })
-    } catch (error) {
-        console.error('Error processing image:', error);
-        res.status(500).json({ error: 'Image processing failed' });
-    }
-});
-
-// Alla olevat on teistailuun, ei käytetä apissa
-
-adsRouter.get('/image', async (req, res) => {
-    console.log("TOIMII");
-    const aiAnswer = await openAi.openAiNewImg();
-
-    res.json(aiAnswer);
-});
-
-adsRouter.get('/describe', async (req, res) => {
-    console.log("TOIMII");
-    const aiAnswer = await openAi.describeImg();
-
-    res.json(aiAnswer);
-});
-
-adsRouter.get('/imagevariation', async (req, res) => {
-    console.log("TOIMII");
-    const aiAnswer = await openAi.imgVariation();
-
-    res.json(aiAnswer);
-});
-
-adsRouter.get('/stabilitymask', async (req, res) => {
-
-    console.log("TOIMII");
-
-    const payload = {
-        image: fs.createReadStream('picture2.jpeg'),
-        output_format: "png"
-    }
-
-    const aiMask = await axios.postForm(
-        `https://api.stability.ai/v2beta/stable-image/edit/remove-background`,
-        axios.toFormData(payload, new FormData()),
-        {
-            validateStatus: undefined,
-            responseType: "arraybuffer",
-            headers: {
-                Authorization: `Bearer ${process.env.STABILITY_KEY}`,
-                Accept: "image/*"
-            },
-        },
-    );
-
-    fs.writeFileSync('controllers/uploads/mask_image.png', Buffer.from(aiMask.data));
-
-    const base64img = aiMask.data.toString('base64');
-    res.json({ data: base64img });
-
-});
-
-adsRouter.get('/stabilityimg', async (req, res) => {
-
-    console.log("TOIMII");
-
-    const payload = {
-        image: fs.createReadStream('controllers/uploads/mask_image.png'),
-        prompt: "sofa on a countryside where a house is on fire",
-        output_format: "png"
-    }
-
-    const aiAnswer = await axios.postForm(
-        `https://api.stability.ai/v2beta/stable-image/edit/inpaint`,
-        axios.toFormData(payload, new FormData()),
-        {
-            validateStatus: undefined,
-            responseType: "arraybuffer",
-            headers: {
-                Authorization: `Bearer ${process.env.STABILITY_KEY}`,
-                Accept: "image/*",
-            },
-        },
-    );
-
-    fs.writeFileSync('controllers/uploads/output_image.png', Buffer.from(aiAnswer.data));
-
-    const base64img = aiAnswer.data.toString('base64');
-    res.json({ data: base64img });
-});
 
 
 
