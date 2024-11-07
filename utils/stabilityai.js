@@ -7,6 +7,8 @@ const stabilityAiKey = process.env.STABILITY_KEY_API
 
 const stabilityimg = async ({ prompt, aiMask }) => {
 
+    console.log("image generation started");
+
     const formData = new FormData();
     formData.append('image', aiMask, { filename: 'image.png' });
     formData.append('prompt', prompt);
@@ -30,7 +32,7 @@ const stabilityimg = async ({ prompt, aiMask }) => {
 
 const stabilitymask = async ({ resizedBuffer }) => {
 
-    console.log("mask operation started")
+    console.log("background removal started");
 
     const formData = new FormData();
     formData.append('image', resizedBuffer, { filename: 'image.png' });

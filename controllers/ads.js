@@ -72,11 +72,10 @@ adsRouter.post('/dall3image', upload.single('img'), async (req, res) => {
 // POST metodi Stability.ai:n inpaintin käyttöön
 adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
 
-    console.log("Post method request");
+    console.log("Post method request: /stabilityimg");
 
     const imgBuffer = req.file.buffer;
     const prompt = req.body.prompt;
-    const isAdText = req.body.isAdText;
 
     try {
         // Asynkroninen kuvan muokkaus ja tallennus
@@ -98,46 +97,21 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
 });
 
 adsRouter.post('/getadtext', upload.single('img'), async (req, res) => {
+
+    console.log("Post method request: /getadtext");
+
     const imgBuffer = req.file.buffer;
-    const viewPoint = req.body.viewPoint;
+    const viewPoints = req.body.viewPoints;
+    console.log(viewPoints)
     try {
         const description = await openAi.describeImg({ imgBuffer });
-        const adText = await openAi.createAdText({ description, viewPoint });
+        const adText = await openAi.createAdText({ description, viewPoints });
         res.json({ adText: adText.content })
     } catch (error) {
         console.error('Error processing image:', error);
         res.status(500).json({ error: 'Image processing failed' });
     }
 });
-
-// POST metodi Stability.ai:n inpaintin käyttöön
-/* adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
-    try {
-        // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt-muuttuja
-        const imgPath = req.filename;
-        const prompt = req.body.prompt;
-
-        // Lähetetään kuva ja prompt Stability AI -palveluun
-        const stabilityimg = await stabilityai.stabilityimg({ prompt, imgPath });
-
-        // Muunnetaan palautettu kuva base64-muotoon
-        const base64img = stabilityimg.data.toString('base64');
-
-        // Lähetetään base64-koodattu kuva vastauksena
-        res.json({ data: base64img });
-    } catch (error) {
-        // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
-        console.error('Error processing image:', error);
-        res.status(500).json({ error: 'Image processing failed' });
-    } finally {
-    // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
-        try {
-            await fs.unlinkSync(`controllers/uploads/${req.filename}`);
-        } catch (unlinkError) {
-            console.error('Error removing image file:', unlinkError);
-        }
-    }
-}); */
 
 // Alla olevat on teistailuun, ei käytetä apissa
 

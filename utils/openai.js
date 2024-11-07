@@ -6,6 +6,52 @@ const openAIKey = process.env.OPENAI_KEY_API;
 
 const openai = new OpenAI({ apiKey: openAIKey});
 
+const describeImg = async ({ imgBuffer }) => {
+
+  console.log("image description started");
+  
+  const base64img = imgBuffer.toString('base64');
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Describe the main furniture piece in this image with as much detail as possible, focusing on its key characteristics such as shape, material, color, texture, and design features. Pay close attention to elements like size, style, functionality, and any distinctive details or patterns that make it stand out. Be precise in identifying these important aspects to create a thorough and accurate description of the furniture." },
+          {
+            type: "image_url",
+            image_url: {
+              "url": `data:image/png;base64,${base64img}`,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  return response.choices[0].message.content;
+};
+
+const createAdText = async ({ description, viewPoints }) => {
+  console.log("addText generation started");
+  adText = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: "You are advertiser."},
+      {
+        role: "user",
+        content: `Write a advertisment text for used furniture from this viewpont: ${viewPoints}. And from this furniture description: ${description} write the advertisment text in finnish and it should be short`
+      },
+    ],
+  });
+  return adText.choices[0].message;
+};
+
+
+
+// All below is for testing
+
+
 const encodeImage = (imagePath) => {
   const image = fs.readFileSync(imagePath);
   return image.toString('base64');
@@ -40,44 +86,6 @@ const imgVariation = async () => {
   image_url = response.data[0].url;
   return image_url;
 }
-
-const describeImg = async ({ imgBuffer }) => {
-  console.log(imgBuffer)
-  const base64img = imgBuffer.toString('base64');
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: "Describe the main furniture piece in this image with as much detail as possible, focusing on its key characteristics such as shape, material, color, texture, and design features. Pay close attention to elements like size, style, functionality, and any distinctive details or patterns that make it stand out. Be precise in identifying these important aspects to create a thorough and accurate description of the furniture." },
-          {
-            type: "image_url",
-            image_url: {
-              "url": `data:image/png;base64,${base64img}`,
-            },
-          },
-        ],
-      },
-    ],
-  });
-
-  return response.choices[0].message.content;
-};
-
-const createAdText = async ({ description, viewPoint }) => {
-  adText = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: "You are advertiser."},
-      {
-        role: "user",
-        content: `Write a advertisment text for used furniture from this viewpont: ${viewPoint}. And from this furniture description: ${description} write the advertisment text in finnish and it should be short`
-      },
-    ],
-  });
-  return adText.choices[0].message;
-};
 
 const imgMask = async () => {
   const response = await openai.images.edit({
