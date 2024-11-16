@@ -47,7 +47,21 @@ const createAdText = async ({ description, viewPoints }) => {
   return adText.choices[0].message;
 };
 
-
+const translatePrompt = async ({ prompt }) => {
+  console.log("translation operation started");
+  console.log(prompt)
+  newPrompt = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: "You are professional translator."},
+      {
+        role: "user",
+        content: `Translate this to english: ${prompt}`
+      },
+    ],
+  });
+  return newPrompt.choices[0].message;
+}
 
 // All below is for testing
 
@@ -100,4 +114,4 @@ const imgMask = async () => {
   return image_url;
 };
 
-module.exports = { openAiImg, openAiNewImg, describeImg, imgVariation, imgMask, createAdText };
+module.exports = { openAiImg, openAiNewImg, describeImg, imgVariation, imgMask, createAdText, translatePrompt };

@@ -11,6 +11,21 @@ const storage = multer.memoryStorage();
 // Create an upload middleware using the memory storage
 const upload = multer({ storage: storage });
 
+adsRouter.post('/translate', upload.single(), async (req, res) => {
+    console.log("Post method request: /translate");
+    const prompt = req.body.prompt;
+    try {
+        console.log(prompt)
+        const newPrompt = await openAi.translatePrompt({ prompt });
+        res.json({ newPrompt });
+    } catch (error) {
+        // Log any errors to the console
+        console.error('Error processing translation:', error);
+        // Send a 500 error response if translation processing fails
+        res.status(500).json({ error: 'prompt translation processing failed' });
+    }
+});
+
 // POST method for Stability.ai's inpaint
 adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
 
