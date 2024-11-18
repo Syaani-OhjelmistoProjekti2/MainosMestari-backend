@@ -3,15 +3,18 @@ const fs = require('fs');
 require('dotenv').config();
 const FormData = require('form-data');
 
-const stabilityAiKey = process.env.STABILITY_KEY_API
+const stabilityAiKey = process.env.STABILITY_KEY_API;
 
 const stabilityimg = async ({ prompt, aiMask }) => {
 
     console.log("image generation started");
 
+    // Lisää oletusteksti promptiin
+    const fullPrompt = `Generate an advertisement image for the product in the provided image. The product should remain unchanged in appearance, color, and shape. Only modify the background and surrounding elements based on the following details: ${prompt}. Do not alter any part of the product in any way. Ensure the product remains intact and unaffected.`;
+
     const formData = new FormData();
     formData.append('image', aiMask, { filename: 'image.png' });
-    formData.append('prompt', prompt);
+    formData.append('prompt', fullPrompt);
     formData.append('output_format', 'png');
 
     const aiAnswer = await axios.postForm(
