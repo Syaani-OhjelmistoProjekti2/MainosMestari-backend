@@ -41,7 +41,9 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
         // Asynchronously resize the image and store it in a buffer
         const resizedBuffer = await sharp(imgBuffer)
             .withMetadata({ orientation: undefined }) // Remove orientation metadata
-            .resize(1350, 1080) // Resize the image to 1350x1080
+            .resize(1350, 1080, {
+                fit: 'contain',
+            }) // Resize the image to 1350x1080
             .jpeg() // Convert the image to JPEG format
             .toBuffer();  // Convert the image to a buffer
 
