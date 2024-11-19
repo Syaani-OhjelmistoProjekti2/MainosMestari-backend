@@ -5,14 +5,14 @@ const FormData = require('form-data');
 
 const stabilityAiKey = process.env.STABILITY_KEY_API
 
-const stabilityimg = async ({ prompt, aiMask }) => {
+const stabilityimg = async ({ newPrompt, aiMask }) => {
 
     console.log("image generation started");
 
     const formData = new FormData();
     formData.append('image', aiMask, { filename: 'image.png' });
-    formData.append('prompt', prompt);
-    formData.append('output_format', 'png');
+    formData.append('prompt', newPrompt);
+    formData.append('output_format', 'jpeg');
 
     const aiAnswer = await axios.postForm(
         `https://api.stability.ai/v2beta/stable-image/edit/inpaint`,

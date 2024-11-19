@@ -36,7 +36,7 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
     const imgBuffer = req.file.buffer;
     // Get the prompt from the request body
     const prompt = req.body.prompt;
-
+    const newPrompt = await openAi.translatePrompt({ prompt });
     try {
         // Asynchronously resize the image and store it in a buffer
         const resizedBuffer = await sharp(imgBuffer)
@@ -51,7 +51,7 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
         const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
 
         // Generate a new image using the prompt and AI mask
-        const stabilityimg = await stabilityai.stabilityimg({ prompt, aiMask });
+        const stabilityimg = await stabilityai.stabilityimg({ newPrompt, aiMask });
         // Convert the generated image to a base64 string
         const base64img = stabilityimg.data.toString('base64');
         // Send the base64 image as a JSON response

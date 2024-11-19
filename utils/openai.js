@@ -49,7 +49,6 @@ const createAdText = async ({ description, viewPoints }) => {
 
 const translatePrompt = async ({ prompt }) => {
   console.log("translation operation started");
-  console.log(prompt)
   newPrompt = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
@@ -60,7 +59,7 @@ const translatePrompt = async ({ prompt }) => {
       },
     ],
   });
-  return newPrompt.choices[0].message;
+  return newPrompt.choices[0].message.content;
 }
 
 // All below is for testing
