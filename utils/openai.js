@@ -7,9 +7,7 @@ const openAIKey = process.env.OPENAI_KEY_API;
 const openai = new OpenAI({ apiKey: openAIKey});
 
 const describeImg = async ({ imgBuffer }) => {
-
   console.log("image description started");
-  
   const base64img = imgBuffer.toString('base64');
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -18,6 +16,30 @@ const describeImg = async ({ imgBuffer }) => {
         role: "user",
         content: [
           { type: "text", text: "Describe the main furniture piece in this image with as much detail as possible, focusing on its key characteristics such as shape, material, color, texture, and design features. Pay close attention to elements like size, style, functionality, and any distinctive details or patterns that make it stand out. Be precise in identifying these important aspects to create a thorough and accurate description of the furniture." },
+          {
+            type: "image_url",
+            image_url: {
+              "url": `data:image/png;base64,${base64img}`,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  return response.choices[0].message.content;
+};
+
+const describeImg2 = async ({ imgBuffer }) => {
+  console.log("image description started");
+  const base64img = imgBuffer.toString('base64');
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Describe the main piece of furniture, give me style, color, shape and size of the furniture" },
           {
             type: "image_url",
             image_url: {
@@ -55,7 +77,7 @@ const translatePrompt = async ({ prompt }) => {
       { role: "system", content: "You are professional translator."},
       {
         role: "user",
-        content: `Translate this to english: ${prompt}`
+        content: `Translate this to english: ${prompt} if the given text is already english return me just the given text, give me just the translation, nothing more.`
       },
     ],
   });
@@ -113,4 +135,4 @@ const imgMask = async () => {
   return image_url;
 };
 
-module.exports = { openAiImg, openAiNewImg, describeImg, imgVariation, imgMask, createAdText, translatePrompt };
+module.exports = { openAiImg, openAiNewImg, describeImg, imgVariation, imgMask, createAdText, translatePrompt, describeImg2 };

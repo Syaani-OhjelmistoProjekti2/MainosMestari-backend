@@ -36,8 +36,10 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
     const imgBuffer = req.file.buffer;
     // Get the prompt from the request body
     const prompt = req.body.prompt;
-    const newPrompt = await openAi.translatePrompt({ prompt });
+
     try {
+        const newPrompt = await openAi.translatePrompt({ prompt });
+        console.log(newPrompt);
         // Asynchronously resize the image and store it in a buffer
         const resizedBuffer = await sharp(imgBuffer)
             .withMetadata({ orientation: undefined }) // Remove orientation metadata
@@ -87,6 +89,36 @@ adsRouter.post('/getadtext', upload.single('img'), async (req, res) => {
         console.error('Error processing image:', error);
         // Send a 500 error response if image processing fails
         res.status(500).json({ error: 'Image processing failed' });
+    }
+});
+
+adsRouter.post('/image', upload.single('img'), async (req, res) => {
+    const imgBuffer = req.file.buffer;
+    const prompt = req.body.prompt;
+
+    try {
+        const newPrompt = await openAi.translatePrompt({ prompt });
+        console.log(newPrompt);
+        const description = await openAi.describeImg2({ imgBuffer });
+        const resizedBuffer = await sharp(imgBuffer)
+            .withMetadata({ orientation: undefined }) // Remove orientation metadata
+            .resize(1350, 1080, {
+                fit: 'contain',
+            }) // Resize the image to 1350x1080s
+            .jpeg() // Convert the image to JPEG format
+            .toBuffer();  // Convert the image to a buffer
+        //const aiMask = resizedBuffer
+        const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
+        //const bufferData = Buffer.from(aiMask, 'base64');
+        //fs.writeFileSync('image.jpg', bufferData);
+        const stabilityimgId = await stabilityai.stabilityTest({ newPrompt, aiMask, description });
+        res.json({ imageId: stabilityimgId });
+
+    } catch (error) {
+            // Log any errors to the console
+            console.error('Error processing image:', error);
+            // Send a 500 error response if image processing fails
+            res.status(500).json({ error: 'Image processing failed' });
     }
 });
 
