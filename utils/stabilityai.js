@@ -3,7 +3,7 @@ const fs = require('fs');
 require('dotenv').config();
 const FormData = require('form-data');
 
-const stabilityAiKey = process.env.STABILITY_KEY_API
+const stabilityAiKey = process.env.STABILITY_KEY_API;
 
 const stabilityimg = async ({ newPrompt, aiMask }) => {
 
