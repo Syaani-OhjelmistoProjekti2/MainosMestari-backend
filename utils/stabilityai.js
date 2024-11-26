@@ -82,37 +82,9 @@ const stabilityTest = async ({ newPrompt, aiMask, description }) => {
     );
 
     console.log('AiAnswer status: ' + aiAnswer.status);
-
     const imageId = aiAnswer.data.id
 
     return imageId;
-    /*
-    console.log('ImageId: ' + imageId)
-
-    let progress = true
-
-    while(progress) {
-        const response = await axios.request({
-            url: `https://api.stability.ai/v2beta/results/${imageId}`,
-            method: "GET",
-            validateStatus: undefined,
-            headers: {
-                Authorization: `Bearer ${stabilityAiKey}`,
-                Accept: 'application/json', // Use 'application/json' to receive base64 encoded JSON
-            },
-            });
-        
-            console.log('Response status: ' + response.status)
-
-            if (response.status === 404 || response.status === 202) {
-                console.log("in progress")
-                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for 5 seconds
-            } else {
-                progress = false;
-                return response.data.result;
-            }
-    }
-    */
 }
 
 const getImageById = async ({ imageId }) => {
@@ -131,7 +103,6 @@ const getImageById = async ({ imageId }) => {
     console.log('Response status: ' + response.status);
 
     if (response.status === 202) {
-        console.log('Palautetaan statuskoodi 202')
         return response.status
     } else {
         return response.data.result;
