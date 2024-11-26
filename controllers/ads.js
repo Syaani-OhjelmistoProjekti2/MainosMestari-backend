@@ -11,6 +11,21 @@ const storage = multer.memoryStorage();
 // Create an upload middleware using the memory storage
 const upload = multer({ storage: storage });
 
+adsRouter.post('/translate', upload.single(), async (req, res) => {
+    console.log("Post method request: /translate");
+    const prompt = req.body.prompt;
+    try {
+        console.log(prompt)
+        const newPrompt = await openAi.translatePrompt({ prompt });
+        res.json({ newPrompt });
+    } catch (error) {
+        // Log any errors to the console
+        console.error('Error processing translation:', error);
+        // Send a 500 error response if translation processing fails
+        res.status(500).json({ error: 'prompt translation processing failed' });
+    }
+});
+
 // POST method for Stability.ai's inpaint
 adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
 
@@ -23,10 +38,14 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
     const prompt = req.body.prompt;
 
     try {
+        const newPrompt = await openAi.translatePrompt({ prompt });
+        console.log(newPrompt);
         // Asynchronously resize the image and store it in a buffer
         const resizedBuffer = await sharp(imgBuffer)
             .withMetadata({ orientation: undefined }) // Remove orientation metadata
-            .resize(1350, 1080) // Resize the image to 1350x1080
+            .resize(1350, 1080, {
+                fit: 'contain',
+            }) // Resize the image to 1350x1080
             .jpeg() // Convert the image to JPEG format
             .toBuffer();  // Convert the image to a buffer
 
@@ -34,7 +53,7 @@ adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
         const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
 
         // Generate a new image using the prompt and AI mask
-        const stabilityimg = await stabilityai.stabilityimg({ prompt, aiMask });
+        const stabilityimg = await stabilityai.stabilityimg({ newPrompt, aiMask });
         // Convert the generated image to a base64 string
         const base64img = stabilityimg.data.toString('base64');
         // Send the base64 image as a JSON response
@@ -70,6 +89,43 @@ adsRouter.post('/getadtext', upload.single('img'), async (req, res) => {
         console.error('Error processing image:', error);
         // Send a 500 error response if image processing fails
         res.status(500).json({ error: 'Image processing failed' });
+    }
+});
+
+adsRouter.post('/image', upload.single('img'), async (req, res) => {
+    const imgBuffer = req.file.buffer;
+    const prompt = req.body.prompt;
+
+    try {
+        const newPrompt = await openAi.translatePrompt({ prompt });
+        const description = await openAi.describeImg2({ imgBuffer });
+        const resizedBuffer = await sharp(imgBuffer)
+            .withMetadata({ orientation: undefined }) // Remove orientation metadata
+            .resize(1350, 1080, {
+                fit: 'contain',
+            }) // Resize the image to 1350x1080s
+            .jpeg() // Convert the image to JPEG format
+            .toBuffer();  // Convert the image to a buffer
+        const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
+        const stabilityimgId = await stabilityai.stabilityTest({ newPrompt, aiMask, description });
+        res.json({ imageId: stabilityimgId });
+
+    } catch (error) {
+            // Log any errors to the console
+            console.error('Error processing image:', error);
+            // Send a 500 error response if image processing fails
+            res.status(500).json({ error: 'Image processing failed' });
+    }
+});
+
+adsRouter.post('/getimage', upload.single(), async (req, res) => {
+    const imageId = req.body.imageId;
+    try {
+        const image = await stabilityai.getImageById({ imageId });
+        res.json({ image: image })
+    } catch (error) {
+        console.error('Error getting image by imageId')
+        res.status(500).json({ error: 'Image fetch failed' });
     }
 });
 
