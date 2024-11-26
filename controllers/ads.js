@@ -98,7 +98,6 @@ adsRouter.post('/image', upload.single('img'), async (req, res) => {
 
     try {
         const newPrompt = await openAi.translatePrompt({ prompt });
-        console.log(newPrompt);
         const description = await openAi.describeImg2({ imgBuffer });
         const resizedBuffer = await sharp(imgBuffer)
             .withMetadata({ orientation: undefined }) // Remove orientation metadata
@@ -107,10 +106,7 @@ adsRouter.post('/image', upload.single('img'), async (req, res) => {
             }) // Resize the image to 1350x1080s
             .jpeg() // Convert the image to JPEG format
             .toBuffer();  // Convert the image to a buffer
-        //const aiMask = resizedBuffer
         const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
-        //const bufferData = Buffer.from(aiMask, 'base64');
-        //fs.writeFileSync('image.jpg', bufferData);
         const stabilityimgId = await stabilityai.stabilityTest({ newPrompt, aiMask, description });
         res.json({ imageId: stabilityimgId });
 
@@ -119,6 +115,17 @@ adsRouter.post('/image', upload.single('img'), async (req, res) => {
             console.error('Error processing image:', error);
             // Send a 500 error response if image processing fails
             res.status(500).json({ error: 'Image processing failed' });
+    }
+});
+
+adsRouter.post('/getimage', upload.single(), async (req, res) => {
+    const imageId = req.body.imageId;
+    try {
+        const image = await stabilityai.getImageById({ imageId });
+        res.json({ image: image })
+    } catch (error) {
+        console.error('Error getting image by imageId')
+        res.status(500).json({ error: 'Image fetch failed' });
     }
 });
 

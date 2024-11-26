@@ -8,8 +8,7 @@ const stabilityAiKey = process.env.STABILITY_KEY_API
 const stabilityimg = async ({ newPrompt, aiMask }) => {
 
     console.log("image generation started");
-    console.log(newPrompt)
-
+    
     const formData = new FormData();
     formData.append('image', aiMask, { filename: 'image.png' });
     formData.append('prompt', newPrompt);
@@ -59,7 +58,6 @@ const stabilitymask = async ({ resizedBuffer }) => {
 
 const stabilityTest = async ({ newPrompt, aiMask, description }) => {
     console.log('stabilityTest started')
-    console.log(description);
 
     const bufferData = Buffer.from(aiMask, 'base64');
     fs.writeFileSync('image.png', bufferData);
@@ -117,4 +115,26 @@ const stabilityTest = async ({ newPrompt, aiMask, description }) => {
     */
 }
 
-module.exports = { stabilityimg, stabilitymask, stabilityTest };
+const getImageById = async ({ imageId }) => {
+    console.log('image fetching started');
+    console.log('imageId: ' + imageId);
+    const response = await axios.request({
+        url: `https://api.stability.ai/v2beta/results/${imageId}`,
+        method: "GET",
+        validateStatus: undefined,
+        headers: {
+            Authorization: `Bearer ${stabilityAiKey}`,
+            Accept: 'application/json', // Use 'application/json' to receive base64 encoded JSON
+        },
+        });
+
+    console.log('Response status: ' + response.status);
+
+    if (response.status === 202) {
+        console.log('Palautetaan statuskoodi 202')
+        return response.status
+    } else {
+        return response.data.result;
+    };
+}
+module.exports = { stabilityimg, stabilitymask, stabilityTest, getImageById };
