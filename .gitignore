@@ -1,2 +1,4 @@
 node_modules
 id_rahti_build
+.env
+.env.*

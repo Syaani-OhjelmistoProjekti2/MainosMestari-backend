@@ -2,3 +2,9 @@ node_modules
 npm-debug.log
 .git
 Dockerfile
+.dockerignore
+
+*.png
+*.jpg
+*.jpeg
+*.webp

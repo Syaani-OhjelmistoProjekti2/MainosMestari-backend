@@ -7,9 +7,9 @@ docker tag mainosmestari laguagu/alya:latest // nämä vaihtaa omaan
 docker push laguagu/alya:latest
 
 Rahti 2 - Rahti Image registry
-docker tag mainosmestari image-registry.apps.2.rahti.csc.fi/alyakokeilut/mainosmestari:latest
+docker tag mainosmestari image-registry.apps.2.rahti.csc.fi/alyakokeilut/mainos-mestari-opiskelijat:latest
 docker login -u g -p $(oc whoami -t) image-registry.apps.2.rahti.csc.fi
-docker push image-registry.apps.2.rahti.csc.fi/alyakokeilut/mainosmestari:latest
+docker push image-registry.apps.2.rahti.csc.fi/alyakokeilut/mainos-mestari-opiskelijat:latest
 
 -Tarkista imagestream
 oc get imagestream mainosmestari

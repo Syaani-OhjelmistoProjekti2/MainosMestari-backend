@@ -1,193 +1,204 @@
-const adsRouter = require('express').Router();
-const openAi = require('../utils/openai');
-const multer = require('multer');
-const fs = require('fs');
-require('dotenv').config();
-const stabilityai = require('../utils/stabilityai');
-const sharp = require('sharp');
+const adsRouter = require("express").Router();
+const openAi = require("../utils/openai");
+const multer = require("multer");
+const fs = require("fs");
+require("dotenv").config();
+const stabilityai = require("../utils/stabilityai");
+const sharp = require("sharp");
 
 // Set up memory storage for multer (used for handling file uploads)
 const storage = multer.memoryStorage();
 // Create an upload middleware using the memory storage
 const upload = multer({ storage: storage });
 
-adsRouter.post('/translate', upload.single(), async (req, res) => {
-    console.log("Post method request: /translate");
-    const prompt = req.body.prompt;
-    try {
-        console.log(prompt)
-        const newPrompt = await openAi.translatePrompt({ prompt });
-        res.json({ newPrompt });
-    } catch (error) {
-        // Log any errors to the console
-        console.error('Error processing translation:', error);
-        // Send a 500 error response if translation processing fails
-        res.status(500).json({ error: 'prompt translation processing failed' });
-    }
+adsRouter.post("/translate", upload.single(), async (req, res) => {
+  console.log("Post method request: /translate");
+  const prompt = req.body.prompt;
+  try {
+    console.log(prompt);
+    const newPrompt = await openAi.translatePrompt({ prompt });
+    res.json({ newPrompt });
+  } catch (error) {
+    // Log any errors to the console
+    console.error("Error processing translation:", error);
+    // Send a 500 error response if translation processing fails
+    res.status(500).json({ error: "prompt translation processing failed" });
+  }
 });
 
 // POST method for Stability.ai's inpaint
-adsRouter.post('/stabilityimg', upload.single('img'), async (req, res) => {
+adsRouter.post("/stabilityimg", upload.single("img"), async (req, res) => {
+  // Log the request to the console
+  console.log("Post method request: /stabilityimg");
 
-    // Log the request to the console
-    console.log("Post method request: /stabilityimg");
+  // Get the image buffer from the uploaded file
+  const imgBuffer = req.file.buffer;
+  // Get the prompt from the request body
+  const prompt = req.body.prompt;
 
-    // Get the image buffer from the uploaded file
-    const imgBuffer = req.file.buffer;
-    // Get the prompt from the request body
-    const prompt = req.body.prompt;
+  try {
+    const newPrompt = await openAi.translatePrompt({ prompt });
+    console.log(newPrompt);
+    // Asynchronously resize the image and store it in a buffer
+    const resizedBuffer = await sharp(imgBuffer)
+      .withMetadata({ orientation: undefined }) // Remove orientation metadata
+      .resize(1350, 1080, {
+        fit: "contain",
+      }) // Resize the image to 1350x1080
+      .jpeg() // Convert the image to JPEG format
+      .toBuffer(); // Convert the image to a buffer
 
-    try {
-        const newPrompt = await openAi.translatePrompt({ prompt });
-        console.log(newPrompt);
-        // Asynchronously resize the image and store it in a buffer
-        const resizedBuffer = await sharp(imgBuffer)
-            .withMetadata({ orientation: undefined }) // Remove orientation metadata
-            .resize(1350, 1080, {
-                fit: 'contain',
-            }) // Resize the image to 1350x1080
-            .jpeg() // Convert the image to JPEG format
-            .toBuffer();  // Convert the image to a buffer
+    // Generate an AI mask using the resized image buffer
+    const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
 
-        // Generate an AI mask using the resized image buffer
-        const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
-
-        // Generate a new image using the prompt and AI mask
-        const stabilityimg = await stabilityai.stabilityimg({ newPrompt, aiMask });
-        // Convert the generated image to a base64 string
-        const base64img = stabilityimg.data.toString('base64');
-        // Send the base64 image as a JSON response
-        res.json({ data: base64img });
-
-    } catch (error) {
-        // Log any errors to the console
-        console.error('Error processing image:', error);
-        // Send a 500 error response if image processing fails
-        res.status(500).json({ error: 'Image processing failed' });
-    };
+    // Generate a new image using the prompt and AI mask
+    const stabilityimg = await stabilityai.stabilityimg({ newPrompt, aiMask });
+    // Convert the generated image to a base64 string
+    const base64img = stabilityimg.data.toString("base64");
+    // Send the base64 image as a JSON response
+    res.json({ data: base64img });
+  } catch (error) {
+    // Log any errors to the console
+    console.error("Error processing image:", error);
+    // Send a 500 error response if image processing fails
+    res.status(500).json({ error: "Image processing failed" });
+  }
 });
 
 // POST method for OpenAi's text generation
-adsRouter.post('/getadtext', upload.single('img'), async (req, res) => {
-    // Log the request to the console
-    console.log("Post method request: /getadtext");
+adsRouter.post("/getadtext", upload.single("img"), async (req, res) => {
+  // Log the request to the console
+  console.log("Post method request: /getadtext");
 
-    // Get the image buffer from the uploaded file
-    const imgBuffer = req.file.buffer;
-    // Get the view points from the request body
-    const viewPoints = req.body.viewPoints;
-    console.log(viewPoints)
-    try {
-        // Describe the image using OpenAI
-        const description = await openAi.describeImg({ imgBuffer });
-        // Create ad text using the image description and view points
-        const adText = await openAi.createAdText({ description, viewPoints });
-        // Send the generated ad text as a JSON response
-        res.json({ adText: adText.content })
-    } catch (error) {
-        // Log any errors to the console
-        console.error('Error processing image:', error);
-        // Send a 500 error response if image processing fails
-        res.status(500).json({ error: 'Image processing failed' });
-    }
+  // Get the image buffer from the uploaded file
+  const imgBuffer = req.file.buffer;
+  // Get the view points from the request body
+  const viewPoints = req.body.viewPoints;
+  console.log(viewPoints);
+  try {
+    // Describe the image using OpenAI
+    const description = await openAi.describeImg({ imgBuffer });
+    // Create ad text using the image description and view points
+    const adText = await openAi.createAdText({ description, viewPoints });
+    // Send the generated ad text as a JSON response
+    res.json({ adText: adText.content });
+  } catch (error) {
+    // Log any errors to the console
+    console.error("Error processing image:", error);
+    // Send a 500 error response if image processing fails
+    res.status(500).json({ error: "Image processing failed" });
+  }
 });
 
-adsRouter.post('/image', upload.single('img'), async (req, res) => {
-    const imgBuffer = req.file.buffer;
-    const prompt = req.body.prompt;
+adsRouter.post("/image", upload.single("img"), async (req, res) => {
+  const imgBuffer = req.file.buffer;
+  const prompt = req.body.prompt;
 
-    try {
-        const newPrompt = await openAi.translatePrompt({ prompt });
-        const description = await openAi.describeImg2({ imgBuffer });
-        const resizedBuffer = await sharp(imgBuffer)
-            .withMetadata({ orientation: undefined }) // Remove orientation metadata
-            .resize(1350, 1080, {
-                fit: 'contain',
-            }) // Resize the image to 1350x1080s
-            .jpeg() // Convert the image to JPEG format
-            .toBuffer();  // Convert the image to a buffer
-        const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
-        const stabilityimgId = await stabilityai.stabilityTest({ newPrompt, aiMask, description });
-        res.json({ imageId: stabilityimgId });
+  try {
+    console.log("Image size:", imgBuffer.length);
+    console.log("Image type:", req.file.mimetype);
 
-    } catch (error) {
-            // Log any errors to the console
-            console.error('Error processing image:', error);
-            // Send a 500 error response if image processing fails
-            res.status(500).json({ error: 'Image processing failed' });
-    }
+    // Varmistetaan että kuva on oikean kokoinen ja muotoinen
+    const resizedBuffer = await sharp(imgBuffer)
+      .withMetadata({ orientation: undefined })
+      .resize(1024, 1024, {
+        fit: "inside",
+        withoutEnlargement: true
+      })
+      .png() // Muunnetaan PNG:ksi
+      .toBuffer();
+
+    console.log("Resized image size:", resizedBuffer.length);
+
+    const newPrompt = await openAi.translatePrompt({ prompt });
+    const description = await openAi.describeImg2({ imgBuffer });
+    const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
+    const stabilityimgId = await stabilityai.stabilityTest({
+      newPrompt,
+      aiMask,
+      description,
+    });
+    res.json({ imageId: stabilityimgId });
+  } catch (error) {
+    console.error("Error processing image:", error);
+    res.status(500).json({ 
+      error: "Image processing failed",
+      details: error.message 
+    });
+  }
 });
 
-adsRouter.post('/getimage', upload.single(), async (req, res) => {
-    const imageId = req.body.imageId;
-    try {
-        const image = await stabilityai.getImageById({ imageId });
-        res.json({ image: image })
-    } catch (error) {
-        console.error('Error getting image by imageId')
-        res.status(500).json({ error: 'Image fetch failed' });
+adsRouter.post("/getimage", upload.single(), async (req, res) => {
+  const imageId = req.body.imageId;
+  try {
+    const image = await stabilityai.getImageById({ imageId });
+    if (image === 202) {
+      res.json({ image: 202 }); // Kuva vielä prosessoinnissa
+    } else {
+      res.json({ image }); // Kuva valmis
     }
+  } catch (error) {
+    console.error("Error getting image by imageId:", error);
+    res.status(500).json({ 
+      error: "Image fetch failed", 
+      details: error.message 
+    });
+  }
 });
-
-
 
 // POST metodi openAi:n dall-E 2 käyttöön !!Removed from forntend!!
-adsRouter.post('/dall2image', upload.single('img'), async (req, res) => {
+adsRouter.post("/dall2image", upload.single("img"), async (req, res) => {
+  try {
+    // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
+    const imgPath = req.filename;
+    const prompt = req.body.prompt;
 
+    // Kutsutaan OpenAI:ta kuvan luomiseksi käyttäjän syöttämän promptin ja kuvatiedoston polun perusteella
+    const aiAnswer = await openAi.openAiImg({ prompt, imgPath });
+
+    // Lähetetään OpenAI:n vastaus asiakkaalle JSON-muodossa
+    res.json(aiAnswer);
+  } catch (error) {
+    // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
+    console.error("Error processing image:", error);
+    res.status(500).json({ error: "Image processing failed" });
+  } finally {
+    // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
     try {
-        // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
-        const imgPath = req.filename;
-        const prompt = req.body.prompt;
-
-        // Kutsutaan OpenAI:ta kuvan luomiseksi käyttäjän syöttämän promptin ja kuvatiedoston polun perusteella
-        const aiAnswer = await openAi.openAiImg({ prompt, imgPath });
-
-        // Lähetetään OpenAI:n vastaus asiakkaalle JSON-muodossa
-        res.json(aiAnswer);
-    } catch (error) {
-        // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
-        console.error('Error processing image:', error);
-        res.status(500).json({ error: 'Image processing failed' });
-    } finally {
-        // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
-        try {
-            await fs.unlinkSync(`controllers/uploads/${req.filename}`);
-        } catch (unlinkError) {
-            console.error('Error removing image file:', unlinkError);
-        }
+      await fs.unlinkSync(`controllers/uploads/${req.filename}`);
+    } catch (unlinkError) {
+      console.error("Error removing image file:", unlinkError);
     }
+  }
 });
 
 // POST metodi openAi:n dall-E 3 käyttöön !!Removed from forntend!!
-adsRouter.post('/dall3image', upload.single('img'), async (req, res) => {
+adsRouter.post("/dall3image", upload.single("img"), async (req, res) => {
+  try {
+    // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
+    const imgPath = req.filename;
+    const userPrompt = req.body.prompt;
+
+    // Kutsutaan OpenAI:ta kuvaustiedon saamiseksi ladatusta kuvasta
+    const description = await openAi.describeImg({ imgPath });
+
+    // Kutsutaan OpenAI:ta uuden kuvan luomiseksi käyttäjän syöttämän promptin ja kuvauksen perusteella
+    const aiAnswer = await openAi.openAiNewImg({ userPrompt, description });
+
+    // Lähetetään OpenAI:n vastaus asiakkaalle JSON-muodossa
+    res.json(aiAnswer);
+  } catch (error) {
+    // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
+    console.error("Error processing image:", error);
+    res.status(500).json({ error: "Image processing failed" });
+  } finally {
+    // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
     try {
-        // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
-        const imgPath = req.filename;
-        const userPrompt = req.body.prompt;
-
-        // Kutsutaan OpenAI:ta kuvaustiedon saamiseksi ladatusta kuvasta
-        const description = await openAi.describeImg({ imgPath });
-
-        // Kutsutaan OpenAI:ta uuden kuvan luomiseksi käyttäjän syöttämän promptin ja kuvauksen perusteella
-        const aiAnswer = await openAi.openAiNewImg({ userPrompt, description });
-
-        // Lähetetään OpenAI:n vastaus asiakkaalle JSON-muodossa
-        res.json(aiAnswer);
-    } catch (error) {
-        // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
-        console.error('Error processing image:', error);
-        res.status(500).json({ error: 'Image processing failed' });
-    } finally {
-        // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
-        try {
-            await fs.unlinkSync(`controllers/uploads/${req.filename}`);
-        } catch (unlinkError) {
-            console.error('Error removing image file:', unlinkError);
-        }
+      await fs.unlinkSync(`controllers/uploads/${req.filename}`);
+    } catch (unlinkError) {
+      console.error("Error removing image file:", unlinkError);
     }
+  }
 });
-
-
-
 
 module.exports = adsRouter;
