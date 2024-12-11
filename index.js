@@ -11,14 +11,3 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Server running on port http://localhost:${PORT}`);
 });
-
-/*
-const options = {
-    key: fs.readFileSync('./ssl/server.key'),
-    cert: fs.readFileSync('./ssl/server.cert')
-};
-
-https.createServer(options, app).listen(PORT, () => {
-    console.log(`Server is running on ${PORT}`);
-});
-*/

@@ -77,7 +77,7 @@ adsRouter.post("/image", upload.single("img"), async (req, res) => {
     res.json({
       imageId: stabilityimgId,
       promptStatus: translatedPrompt.status,
-      descriptionStatus: description.status,
+      description: results.description,
     });
   } catch (error) {
     console.error("Error processing image:", error);
@@ -108,6 +108,56 @@ adsRouter.post("/getimage", upload.single(), async (req, res) => {
     });
   }
 });
+
+adsRouter.post("/translate", async (req, res) => {
+  console.log("Post method request: /translate");
+  const prompt = req.body.prompt;
+  try {
+    console.log(prompt);
+    const newPrompt = await openAi.translatePrompt({ prompt });
+    res.json({ newPrompt });
+  } catch (error) {
+    // Log any errors to the console
+    console.error("Error processing translation:", error);
+    // Send a 500 error response if translation processing fails
+    res.status(500).json({ error: "prompt translation processing failed" });
+  }
+});
+
+adsRouter.post("/generateFinAdText", async (req, res) => {
+  console.log("Post method request: /generateFinAdText");
+  const body = req.body;
+  const prompt = body.prompt;
+  console.log("body,", body);
+
+  try {
+    console.log(prompt);
+    const newPrompt = await openAi.generateFinAdText({ prompt });
+    res.json({ newPrompt });
+  } catch (error) {
+    // Log any errors to the console
+    console.error("Error processing translation:", error);
+    // Send a 500 error response if translation processing fails
+    res.status(500).json({ error: "prompt translation processing failed" });
+  }
+});
+
+adsRouter.post("/getadtext", upload.single("img"), async (req, res) => {
+  console.log("Post method request: /getadtext");
+
+  const imgBuffer = req.file.buffer;
+  const viewPoints = req.body.viewPoints;
+  console.log(viewPoints);
+  try {
+    const description = await openAi.describeImg({ imgBuffer });
+    const adText = await openAi.createAdText({ description, viewPoints });
+    res.json({ adText: adText.content });
+  } catch (error) {
+    console.error("Error processing image:", error);
+    res.status(500).json({ error: "Image processing failed" });
+  }
+});
+
 // POST metodi openAi:n dall-E 2 käyttöön !!Removed from forntend!!
 adsRouter.post("/dall2image", upload.single("img"), async (req, res) => {
   try {
@@ -160,46 +210,6 @@ adsRouter.post("/dall3image", upload.single("img"), async (req, res) => {
     } catch (unlinkError) {
       console.error("Error removing image file:", unlinkError);
     }
-  }
-});
-
-adsRouter.post("/translate", upload.single(), async (req, res) => {
-  console.log("Post method request: /translate");
-  const prompt = req.body.prompt;
-  try {
-    console.log(prompt);
-    const newPrompt = await openAi.translatePrompt({ prompt });
-    res.json({ newPrompt });
-  } catch (error) {
-    // Log any errors to the console
-    console.error("Error processing translation:", error);
-    // Send a 500 error response if translation processing fails
-    res.status(500).json({ error: "prompt translation processing failed" });
-  }
-});
-
-// POST method for OpenAi's text generation
-adsRouter.post("/getadtext", upload.single("img"), async (req, res) => {
-  // Log the request to the console
-  console.log("Post method request: /getadtext");
-
-  // Get the image buffer from the uploaded file
-  const imgBuffer = req.file.buffer;
-  // Get the view points from the request body
-  const viewPoints = req.body.viewPoints;
-  console.log(viewPoints);
-  try {
-    // Describe the image using OpenAI
-    const description = await openAi.describeImg({ imgBuffer });
-    // Create ad text using the image description and view points
-    const adText = await openAi.createAdText({ description, viewPoints });
-    // Send the generated ad text as a JSON response
-    res.json({ adText: adText.content });
-  } catch (error) {
-    // Log any errors to the console
-    console.error("Error processing image:", error);
-    // Send a 500 error response if image processing fails
-    res.status(500).json({ error: "Image processing failed" });
   }
 });
 
