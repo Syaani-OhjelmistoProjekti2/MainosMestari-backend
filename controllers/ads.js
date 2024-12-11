@@ -1,147 +1,114 @@
 const adsRouter = require("express").Router();
 const openAi = require("../utils/openai");
 const multer = require("multer");
-const fs = require("fs");
+const fs = require("fs/promises");
 require("dotenv").config();
 const stabilityai = require("../utils/stabilityai");
 const sharp = require("sharp");
+const path = require("path");
 
 // Set up memory storage for multer (used for handling file uploads)
 const storage = multer.memoryStorage();
 // Create an upload middleware using the memory storage
 const upload = multer({ storage: storage });
 
-adsRouter.post("/translate", upload.single(), async (req, res) => {
-  console.log("Post method request: /translate");
-  const prompt = req.body.prompt;
+const debugDir = path.join(__dirname, "debug-images");
+const ensureDebugDir = async () => {
   try {
-    console.log(prompt);
-    const newPrompt = await openAi.translatePrompt({ prompt });
-    res.json({ newPrompt });
-  } catch (error) {
-    // Log any errors to the console
-    console.error("Error processing translation:", error);
-    // Send a 500 error response if translation processing fails
-    res.status(500).json({ error: "prompt translation processing failed" });
+    await fs.access(debugDir);
+  } catch {
+    await fs.mkdir(debugDir, { recursive: true });
   }
-});
+};
 
-// POST method for Stability.ai's inpaint
-adsRouter.post("/stabilityimg", upload.single("img"), async (req, res) => {
-  // Log the request to the console
-  console.log("Post method request: /stabilityimg");
-
-  // Get the image buffer from the uploaded file
-  const imgBuffer = req.file.buffer;
-  // Get the prompt from the request body
-  const prompt = req.body.prompt;
-
-  try {
-    const newPrompt = await openAi.translatePrompt({ prompt });
-    console.log(newPrompt);
-    // Asynchronously resize the image and store it in a buffer
-    const resizedBuffer = await sharp(imgBuffer)
-      .withMetadata({ orientation: undefined }) // Remove orientation metadata
-      .resize(1350, 1080, {
-        fit: "contain",
-      }) // Resize the image to 1350x1080
-      .jpeg() // Convert the image to JPEG format
-      .toBuffer(); // Convert the image to a buffer
-
-    // Generate an AI mask using the resized image buffer
-    const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
-
-    // Generate a new image using the prompt and AI mask
-    const stabilityimg = await stabilityai.stabilityimg({ newPrompt, aiMask });
-    // Convert the generated image to a base64 string
-    const base64img = stabilityimg.data.toString("base64");
-    // Send the base64 image as a JSON response
-    res.json({ data: base64img });
-  } catch (error) {
-    // Log any errors to the console
-    console.error("Error processing image:", error);
-    // Send a 500 error response if image processing fails
-    res.status(500).json({ error: "Image processing failed" });
-  }
-});
-
-// POST method for OpenAi's text generation
-adsRouter.post("/getadtext", upload.single("img"), async (req, res) => {
-  // Log the request to the console
-  console.log("Post method request: /getadtext");
-
-  // Get the image buffer from the uploaded file
-  const imgBuffer = req.file.buffer;
-  // Get the view points from the request body
-  const viewPoints = req.body.viewPoints;
-  console.log(viewPoints);
-  try {
-    // Describe the image using OpenAI
-    const description = await openAi.describeImg({ imgBuffer });
-    // Create ad text using the image description and view points
-    const adText = await openAi.createAdText({ description, viewPoints });
-    // Send the generated ad text as a JSON response
-    res.json({ adText: adText.content });
-  } catch (error) {
-    // Log any errors to the console
-    console.error("Error processing image:", error);
-    // Send a 500 error response if image processing fails
-    res.status(500).json({ error: "Image processing failed" });
-  }
-});
+const saveDebugImage = async (buffer, suffix) => {
+  await ensureDebugDir();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const filepath = path.join(debugDir, `debug-${timestamp}-${suffix}.png`);
+  await fs.writeFile(filepath, buffer);
+  console.log(`Debug image saved: ${filepath}`);
+  return filepath;
+};
 
 adsRouter.post("/image", upload.single("img"), async (req, res) => {
   const imgBuffer = req.file.buffer;
   const prompt = req.body.prompt;
 
   try {
-    console.log("Image size:", imgBuffer.length);
-    console.log("Image type:", req.file.mimetype);
+    console.log("Original image size:", imgBuffer.length);
+    console.log("Original image type:", req.file.mimetype);
 
-    // Varmistetaan että kuva on oikean kokoinen ja muotoinen
+    await saveDebugImage(req.file.buffer, "original");
+
+    // Muunnetaan kuva optimaaliseen kokoon
+    // Stability AI mask endpoint rajoittaa koon 4,194,304 pikseliin
+    const maxPixels = 4000000; // Hieman alle maksimin varmuuden vuoksi
+    const dimension = Math.floor(Math.sqrt(maxPixels)); // Noin 2000x2000
+
     const resizedBuffer = await sharp(imgBuffer)
       .withMetadata({ orientation: undefined })
-      .resize(1024, 1024, {
-        fit: "inside",
-        withoutEnlargement: true
+      .resize(dimension, dimension, {
+        fit: "fill", // Vaihdetaan "contain" -> "fill" välttääksemme läpinäkyviä reunoja
+        background: { r: 255, g: 255, b: 255, alpha: 1 }, // Valkoinen tausta läpinäkyvän sijaan
       })
-      .png() // Muunnetaan PNG:ksi
+      .png({
+        quality: 100,
+        compressionLevel: 0,
+      })
       .toBuffer();
 
-    console.log("Resized image size:", resizedBuffer.length);
+    await saveDebugImage(resizedBuffer, "resized");
+
+    console.log("Optimized image size:", resizedBuffer.length);
+    console.log("Optimized dimensions:", `${dimension}x${dimension}`);
 
     const newPrompt = await openAi.translatePrompt({ prompt });
     const description = await openAi.describeImg2({ imgBuffer });
     const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
-    const stabilityimgId = await stabilityai.stabilityTest({
+
+    // Tallennetaan maski debuggausta varten
+    await saveDebugImage(aiMask, "mask");
+
+    const stabilityimgId = await stabilityai.stabilityInpaint({
       newPrompt,
       aiMask,
       description,
     });
+
     res.json({ imageId: stabilityimgId });
   } catch (error) {
     console.error("Error processing image:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Image processing failed",
-      details: error.message 
+      details: error.message,
     });
   }
 });
-
 adsRouter.post("/getimage", upload.single(), async (req, res) => {
   const imageId = req.body.imageId;
+
   try {
-    const image = await stabilityai.getImageById({ imageId });
-    if (image === 202) {
-      res.json({ image: 202 }); // Kuva vielä prosessoinnissa
-    } else {
-      res.json({ image }); // Kuva valmis
+    const result = await stabilityai.getImageById({ imageId });
+
+    if (result === 202) {
+      return res.json({ image: 202 }); // Prosessointi kesken
     }
+
+    // Tallenna debug-kuva jos mahdollista
+    try {
+      const imageBuffer = Buffer.from(result, "base64");
+      await saveDebugImage(imageBuffer, "final");
+    } catch (debugError) {
+      console.error("Debug image save failed:", debugError);
+    }
+
+    // Lähetä base64-data clientille
+    res.json({ image: result });
   } catch (error) {
-    console.error("Error getting image by imageId:", error);
-    res.status(500).json({ 
-      error: "Image fetch failed", 
-      details: error.message 
+    console.error("Error fetching image:", error);
+    res.status(500).json({
+      error: "Image fetch failed",
+      details: error.message,
     });
   }
 });
@@ -198,6 +165,46 @@ adsRouter.post("/dall3image", upload.single("img"), async (req, res) => {
     } catch (unlinkError) {
       console.error("Error removing image file:", unlinkError);
     }
+  }
+});
+
+adsRouter.post("/translate", upload.single(), async (req, res) => {
+  console.log("Post method request: /translate");
+  const prompt = req.body.prompt;
+  try {
+    console.log(prompt);
+    const newPrompt = await openAi.translatePrompt({ prompt });
+    res.json({ newPrompt });
+  } catch (error) {
+    // Log any errors to the console
+    console.error("Error processing translation:", error);
+    // Send a 500 error response if translation processing fails
+    res.status(500).json({ error: "prompt translation processing failed" });
+  }
+});
+
+// POST method for OpenAi's text generation
+adsRouter.post("/getadtext", upload.single("img"), async (req, res) => {
+  // Log the request to the console
+  console.log("Post method request: /getadtext");
+
+  // Get the image buffer from the uploaded file
+  const imgBuffer = req.file.buffer;
+  // Get the view points from the request body
+  const viewPoints = req.body.viewPoints;
+  console.log(viewPoints);
+  try {
+    // Describe the image using OpenAI
+    const description = await openAi.describeImg({ imgBuffer });
+    // Create ad text using the image description and view points
+    const adText = await openAi.createAdText({ description, viewPoints });
+    // Send the generated ad text as a JSON response
+    res.json({ adText: adText.content });
+  } catch (error) {
+    // Log any errors to the console
+    console.error("Error processing image:", error);
+    // Send a 500 error response if image processing fails
+    res.status(500).json({ error: "Image processing failed" });
   }
 });
 

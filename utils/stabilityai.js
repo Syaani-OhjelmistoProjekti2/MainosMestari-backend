@@ -7,7 +7,7 @@ const stabilityAiKey = process.env.STABILITY_KEY_API;
 
 if (!stabilityAiKey) {
   throw new Error(
-    "STABILITY_KEY_API environment variable is not set. Please check your .env file."
+    "STABILITY_KEY_API environment variable is not set. Please check your .env file.",
   );
 }
 
@@ -31,7 +31,7 @@ const stabilityimg = async ({ newPrompt, aiMask }) => {
         Authorization: `Bearer ${stabilityAiKey}`,
         Accept: "image/*",
       },
-    }
+    },
   );
 
   return aiAnswer;
@@ -52,9 +52,9 @@ const stabilitymask = async ({ resizedBuffer }) => {
       filename: "input.png",
       contentType: "image/png",
     });
-    formData.append("output_format", "png");
 
-    // Poistetaan formData.entries() debug-tulostus, koska se ei toimi Node.js:ssä
+    formData.append("output_format", "png");
+    formData.append("grow_mask", 15); // Pehmennetään reunat
 
     const response = await axios.postForm(
       `https://api.stability.ai/v2beta/stable-image/edit/remove-background`,
@@ -66,7 +66,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
           Authorization: `Bearer ${stabilityAiKey}`,
           Accept: "image/*",
         },
-      }
+      },
     );
 
     // Jos vastaus ei ole onnistunut, käsitellään virhe
@@ -78,7 +78,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
           throw new Error(`API Error: ${JSON.stringify(errorJson)}`);
         } catch (e) {
           throw new Error(
-            `Failed with status ${response.status}: ${errorText}`
+            `Failed with status ${response.status}: ${errorText}`,
           );
         }
       } else {
@@ -91,7 +91,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
     if (error.response) {
       // Jos meillä on API:n vastaus virheestä
       const errorData = error.response.headers["content-type"]?.includes(
-        "application/json"
+        "application/json",
       )
         ? JSON.parse(new TextDecoder().decode(error.response.data))
         : new TextDecoder().decode(error.response.data);
@@ -105,7 +105,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
   }
 };
 
-const stabilityTest = async ({ newPrompt, aiMask, description }) => {
+const stabilityInpaint = async ({ newPrompt, aiMask, description }) => {
   console.log("stabilityTest started");
 
   try {
@@ -120,7 +120,7 @@ const stabilityTest = async ({ newPrompt, aiMask, description }) => {
     // Lisätään kuva FormDataan oikeassa muodossa
     formData.append("subject_image", aiMask, {
       filename: "image.png",
-      contentType: "image/png", // Määritellään content type eksplisiittisesti
+      contentType: "image/png",
     });
 
     formData.append("background_prompt", newPrompt);
@@ -128,7 +128,7 @@ const stabilityTest = async ({ newPrompt, aiMask, description }) => {
     formData.append("original_background_depth", 0);
     formData.append(
       "negative_prompt",
-      "background elements, shadows, artifacts, residual objects, extra pixels, distortion, unnecessary details, unrelated objects, clutter, blurred edges, leftover noise"
+      "border artifacts, frames, edges, boundaries, artifacts, background residue, seams, transitions, noise, distortion, blurry edges",
     );
 
     const aiAnswer = await axios.postForm(
@@ -140,7 +140,7 @@ const stabilityTest = async ({ newPrompt, aiMask, description }) => {
           Authorization: `Bearer ${stabilityAiKey}`,
           Accept: "application/json",
         },
-      }
+      },
     );
 
     console.log("API Response:", {
@@ -192,7 +192,7 @@ const getImageById = async ({ imageId }) => {
       // API-virhe
       console.error("API error:", response.data);
       throw new Error(
-        "API-kutsu epäonnistui: " + JSON.stringify(response.data)
+        "API-kutsu epäonnistui: " + JSON.stringify(response.data),
       );
     } else {
       // Muu virhe
@@ -207,4 +207,9 @@ const getImageById = async ({ imageId }) => {
   }
 };
 
-module.exports = { stabilityimg, stabilitymask, stabilityTest, getImageById };
+module.exports = {
+  stabilityimg,
+  stabilitymask,
+  stabilityInpaint,
+  getImageById,
+};
