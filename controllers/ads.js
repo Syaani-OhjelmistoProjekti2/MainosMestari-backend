@@ -6,10 +6,9 @@ require("dotenv").config();
 const stabilityai = require("../utils/stabilityai");
 const sharp = require("sharp");
 const path = require("path");
+const { optimizeImage } = require("../helpers/ÏmageOptimizer");
 
-// Set up memory storage for multer (used for handling file uploads)
 const storage = multer.memoryStorage();
-// Create an upload middleware using the memory storage
 const upload = multer({ storage: storage });
 
 const debugDir = path.join(__dirname, "debug-images");
@@ -32,50 +31,54 @@ const saveDebugImage = async (buffer, suffix) => {
 
 adsRouter.post("/image", upload.single("img"), async (req, res) => {
   const imgBuffer = req.file.buffer;
-  const prompt = req.body.prompt;
+  const prompt = req.body.prompt || "";
 
   try {
-    console.log("Original image size:", imgBuffer.length);
     console.log("Original image type:", req.file.mimetype);
 
     await saveDebugImage(req.file.buffer, "original");
 
-    // Muunnetaan kuva optimaaliseen kokoon
-    // Stability AI mask endpoint rajoittaa koon 4,194,304 pikseliin
-    const maxPixels = 4000000; // Hieman alle maksimin varmuuden vuoksi
-    const dimension = Math.floor(Math.sqrt(maxPixels)); // Noin 2000x2000
-
-    const resizedBuffer = await sharp(imgBuffer)
-      .withMetadata({ orientation: undefined })
-      .resize(dimension, dimension, {
-        fit: "fill", // Vaihdetaan "contain" -> "fill" välttääksemme läpinäkyviä reunoja
-        background: { r: 255, g: 255, b: 255, alpha: 1 }, // Valkoinen tausta läpinäkyvän sijaan
-      })
-      .png({
-        quality: 100,
-        compressionLevel: 0,
-      })
-      .toBuffer();
-
+    const resizedBuffer = await optimizeImage(imgBuffer);
     await saveDebugImage(resizedBuffer, "resized");
 
-    console.log("Optimized image size:", resizedBuffer.length);
-    console.log("Optimized dimensions:", `${dimension}x${dimension}`);
+    // Suoritetaan API-kutsut rinnakkain
+    const [translatedPrompt, description, aiMask] = await Promise.allSettled([
+      prompt ? openAi.translatePrompt({ prompt }) : Promise.resolve(""),
+      openAi.describeImg2({ imgBuffer }),
+      stabilityai.stabilitymask({ resizedBuffer }), // Otettu kommentti pois
+    ]);
 
-    const newPrompt = await openAi.translatePrompt({ prompt });
-    const description = await openAi.describeImg2({ imgBuffer });
-    const aiMask = await stabilityai.stabilitymask({ resizedBuffer });
+    const results = {
+      translatedPrompt:
+        translatedPrompt.status === "fulfilled" ? translatedPrompt.value : "",
+      description: description.status === "fulfilled" ? description.value : "",
+      aiMask: aiMask.status === "fulfilled" ? aiMask.value : null,
+    };
 
-    // Tallennetaan maski debuggausta varten
-    await saveDebugImage(aiMask, "mask");
-
-    const stabilityimgId = await stabilityai.stabilityInpaint({
-      newPrompt,
-      aiMask,
-      description,
+    console.log("API Results:", {
+      promptStatus: translatedPrompt.status,
+      descriptionStatus: description.status,
+      maskStatus: aiMask.status,
     });
 
-    res.json({ imageId: stabilityimgId });
+    if (!results.aiMask) {
+      throw new Error(`Failed to process image mask: ${aiMask.reason}`);
+    }
+
+    // Tallennetaan maski debuggausta varten
+    await saveDebugImage(results.aiMask, "mask");
+    // Suoritetaan InPaint operaatio
+    const stabilityimgId = await stabilityai.stabilityInpaint({
+      translatedPrompt: results.translatedPrompt,
+      aiMask: results.aiMask,
+      description: results.description,
+    });
+
+    res.json({
+      imageId: stabilityimgId,
+      promptStatus: translatedPrompt.status,
+      descriptionStatus: description.status,
+    });
   } catch (error) {
     console.error("Error processing image:", error);
     res.status(500).json({
@@ -84,6 +87,7 @@ adsRouter.post("/image", upload.single("img"), async (req, res) => {
     });
   }
 });
+
 adsRouter.post("/getimage", upload.single(), async (req, res) => {
   const imageId = req.body.imageId;
 
@@ -94,15 +98,7 @@ adsRouter.post("/getimage", upload.single(), async (req, res) => {
       return res.json({ image: 202 }); // Prosessointi kesken
     }
 
-    // Tallenna debug-kuva jos mahdollista
-    try {
-      const imageBuffer = Buffer.from(result, "base64");
-      await saveDebugImage(imageBuffer, "final");
-    } catch (debugError) {
-      console.error("Debug image save failed:", debugError);
-    }
-
-    // Lähetä base64-data clientille
+    // result on jo base64-muodossa, joten ei tarvitse muuntaa
     res.json({ image: result });
   } catch (error) {
     console.error("Error fetching image:", error);
@@ -112,7 +108,6 @@ adsRouter.post("/getimage", upload.single(), async (req, res) => {
     });
   }
 });
-
 // POST metodi openAi:n dall-E 2 käyttöön !!Removed from forntend!!
 adsRouter.post("/dall2image", upload.single("img"), async (req, res) => {
   try {

@@ -89,7 +89,6 @@ const stabilitymask = async ({ resizedBuffer }) => {
     return response.data;
   } catch (error) {
     if (error.response) {
-      // Jos meillä on API:n vastaus virheestä
       const errorData = error.response.headers["content-type"]?.includes(
         "application/json",
       )
@@ -105,11 +104,12 @@ const stabilitymask = async ({ resizedBuffer }) => {
   }
 };
 
-const stabilityInpaint = async ({ newPrompt, aiMask, description }) => {
+const stabilityInpaint = async ({ translatedPrompt, aiMask, description }) => {
   console.log("stabilityTest started");
+  console.log("translatedPrompt: " + translatedPrompt);
+  console.log("description: " + description);
 
   try {
-    // Tarkistetaan että aiMask on Buffer
     if (!Buffer.isBuffer(aiMask)) {
       console.log("Converting aiMask to Buffer");
       aiMask = Buffer.from(aiMask);
@@ -117,19 +117,42 @@ const stabilityInpaint = async ({ newPrompt, aiMask, description }) => {
 
     const formData = new FormData();
 
-    // Lisätään kuva FormDataan oikeassa muodossa
+    // Päätiedot
     formData.append("subject_image", aiMask, {
       filename: "image.png",
       contentType: "image/png",
     });
 
-    formData.append("background_prompt", newPrompt);
-    formData.append("foreground_prompt", description);
-    formData.append("original_background_depth", 0);
+    if (!translatedPrompt) {
+      throw new Error("Background prompt is required");
+    }
+
+    // Tehokkaampi taustakuvaus mainoskuville
+    formData.append(
+      "background_prompt",
+      `${translatedPrompt}, high quality commercial photography style`,
+    );
+
+    // Varmistetaan että tuote säilyy alkuperäisen näköisenä
+    formData.append("preserve_original_subject", 1); // Korkeampi arvo säilyttää tuotteen tarkemmin
+
+    // Kuvaile tuotetta tarkemmin
+    formData.append(
+      "foreground_prompt",
+      `professional product photo of ${description}, maintain original colors and details, commercial photography quality`,
+    );
+
+    // Säädetään taustan syvyysvaikutelmaa
+    formData.append("original_background_depth", 0.4);
+
+    // Vältetään häiriöitä kuvassa
     formData.append(
       "negative_prompt",
-      "border artifacts, frames, edges, boundaries, artifacts, background residue, seams, transitions, noise, distortion, blurry edges",
+      "border artifacts, frames, blurry edges, background residue, seams, transitions, noise, distortion, blurry edges, oversaturation, unrealistic lighting",
     );
+
+    // Määritellään output-formaatti
+    formData.append("output_format", "png");
 
     const aiAnswer = await axios.postForm(
       `https://api.stability.ai/v2beta/stable-image/edit/replace-background-and-relight`,
@@ -145,14 +168,17 @@ const stabilityInpaint = async ({ newPrompt, aiMask, description }) => {
 
     console.log("API Response:", {
       status: aiAnswer.status,
+      data: aiAnswer.data,
     });
-
-    if (!aiAnswer.data || !aiAnswer.data.id) {
-      throw new Error("No valid ID in response");
-    }
 
     if (aiAnswer.status === 400) {
       throw new Error(`API Error: ${JSON.stringify(aiAnswer.data)}`);
+    }
+
+    if (!aiAnswer.data || !aiAnswer.data.id) {
+      throw new Error(
+        `No valid ID in response: ${JSON.stringify(aiAnswer.data)}`,
+      );
     }
 
     return aiAnswer.data.id;
@@ -183,19 +209,15 @@ const getImageById = async ({ imageId }) => {
     console.log("Response status:", response.status);
 
     if (response.status === 202) {
-      // Kuva on vielä prosessoinnissa
       return 202;
     } else if (response.status === 200 && response.data.result) {
-      // Kuva on valmis
       return response.data.result;
     } else if (response.status === 400) {
-      // API-virhe
       console.error("API error:", response.data);
       throw new Error(
         "API-kutsu epäonnistui: " + JSON.stringify(response.data),
       );
     } else {
-      // Muu virhe
       throw new Error("Odottamaton vastaus API:lta");
     }
   } catch (error) {
@@ -206,7 +228,6 @@ const getImageById = async ({ imageId }) => {
     throw error;
   }
 };
-
 module.exports = {
   stabilityimg,
   stabilitymask,
