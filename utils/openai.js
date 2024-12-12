@@ -1,5 +1,6 @@
 const OpenAI = require("openai");
 require("dotenv").config();
+const { buildUserPrompt } = require("./promptConfig");
 
 const openAIKey = process.env.OPENAI_KEY_API;
 
@@ -61,11 +62,11 @@ const translatePrompt = async ({ prompt }) => {
   return newPrompt.choices[0].message.content;
 };
 
-const generateFinAdText = async ({ prompt }) => {
-  // Lisää viewpoints eli käytettävyys, korjattuvuus, huolletoisuus, käyttötarkoitus yms.
-  console.log("translation operation started");
+const generateFinAdText = async ({ prompt, options }) => {
+  const userPrompt = buildUserPrompt({ prompt, options });
+
   const newPrompt = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4",
     messages: [
       {
         role: "system",
@@ -73,17 +74,11 @@ const generateFinAdText = async ({ prompt }) => {
       },
       {
         role: "user",
-        content: `Kirjoita myyvä ja houkutteleva myynti-ilmoitus käytetylle huonekalulle suomeksi. Keskity erityisesti seuraaviin näkökulmiin:
-        - **Korjattavuus**: Kuinka helposti huonekalu voidaan korjata tai huoltaa? 
-        - **Parhaat puolet**: Mitkä ovat huonekalun tärkeimmät edut ja ominaisuudet?
-        - **Käyttötarkoitukset**: Missä ja miten huonekalua voidaan käyttää?
-         
-        Kuvaus huonekalusta: "${prompt}"
-        
-        Ilmoituksen tulee olla lyhyt, ytimekäs ja vakuuttava. Pyri herättämään kiinnostus ja houkuttelemaan ostajia. Vältä käyttämästä markdown-muotoilua tai muita erikoismerkkejä, kuten tähtiä (*), ja kirjoita puhtaasti tekstimuotoista sisältöä.`,
+        content: userPrompt,
       },
     ],
   });
+
   return newPrompt.choices[0].message.content;
 };
 
