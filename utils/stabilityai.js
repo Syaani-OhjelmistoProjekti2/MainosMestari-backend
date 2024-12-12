@@ -187,8 +187,6 @@ const stabilityInpaint = async ({
 };
 
 const getImageById = async ({ imageId }) => {
-  console.log("polling image status", imageId);
-
   try {
     const response = await axios.request({
       url: `https://api.stability.ai/v2beta/results/${imageId}`,

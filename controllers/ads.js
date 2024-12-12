@@ -34,8 +34,6 @@ adsRouter.post("/image", upload.single("img"), async (req, res) => {
   const creativity = JSON.parse(req.body.creativity);
 
   try {
-    console.log("Original image type:", req.file.mimetype);
-
     // await saveDebugImage(req.file.buffer, "original");
 
     const resizedBuffer = await optimizeImage(imgBuffer);
