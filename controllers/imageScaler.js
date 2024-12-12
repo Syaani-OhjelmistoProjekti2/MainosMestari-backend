@@ -1,6 +1,6 @@
 const express = require("express");
 const sharp = require("sharp");
-const { getFormatConfig } = require("../utils/formtaConfig");
+const { getFormatConfig } = require("../utils/formatConfig");
 
 const router = express.Router();
 

@@ -1,13 +1,12 @@
 require("dotenv").config();
 const axios = require("axios");
-const fs = require("fs");
 const FormData = require("form-data");
 
 const stabilityAiKey = process.env.STABILITY_KEY_API;
 
 if (!stabilityAiKey) {
   throw new Error(
-    "STABILITY_KEY_API environment variable is not set. Please check your .env file.",
+    "STABILITY_KEY_API environment variable is not set. Please check your .env file."
   );
 }
 
@@ -31,21 +30,17 @@ const stabilityimg = async ({ newPrompt, aiMask }) => {
         Authorization: `Bearer ${stabilityAiKey}`,
         Accept: "image/*",
       },
-    },
+    }
   );
 
   return aiAnswer;
 };
 
 const stabilitymask = async ({ resizedBuffer }) => {
-  console.log("background removal started");
-
   try {
     if (!Buffer.isBuffer(resizedBuffer)) {
       throw new Error("Input must be a Buffer");
     }
-
-    console.log("Image buffer size:", resizedBuffer.length);
 
     const formData = new FormData();
     formData.append("image", resizedBuffer, {
@@ -66,7 +61,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
           Authorization: `Bearer ${stabilityAiKey}`,
           Accept: "image/*",
         },
-      },
+      }
     );
 
     // Jos vastaus ei ole onnistunut, käsitellään virhe
@@ -78,7 +73,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
           throw new Error(`API Error: ${JSON.stringify(errorJson)}`);
         } catch (e) {
           throw new Error(
-            `Failed with status ${response.status}: ${errorText}`,
+            `Failed with status ${response.status}: ${errorText}`
           );
         }
       } else {
@@ -90,7 +85,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
   } catch (error) {
     if (error.response) {
       const errorData = error.response.headers["content-type"]?.includes(
-        "application/json",
+        "application/json"
       )
         ? JSON.parse(new TextDecoder().decode(error.response.data))
         : new TextDecoder().decode(error.response.data);
@@ -104,11 +99,12 @@ const stabilitymask = async ({ resizedBuffer }) => {
   }
 };
 
-const stabilityInpaint = async ({ translatedPrompt, aiMask, description }) => {
-  console.log("stabilityTest started");
-  console.log("translatedPrompt: " + translatedPrompt);
-  console.log("description: " + description);
-
+const stabilityInpaint = async ({
+  translatedPrompt,
+  aiMask,
+  description,
+  creativity = false,
+}) => {
   try {
     if (!Buffer.isBuffer(aiMask)) {
       console.log("Converting aiMask to Buffer");
@@ -127,29 +123,33 @@ const stabilityInpaint = async ({ translatedPrompt, aiMask, description }) => {
       throw new Error("Background prompt is required");
     }
 
-    // Tehokkaampi taustakuvaus mainoskuville
-    formData.append(
-      "background_prompt",
-      `${translatedPrompt}, high quality commercial photography style`,
-    );
-
-    // Varmistetaan että tuote säilyy alkuperäisen näköisenä
-    formData.append("preserve_original_subject", 1); // Korkeampi arvo säilyttää tuotteen tarkemmin
-
-    // Kuvaile tuotetta tarkemmin
-    formData.append(
-      "foreground_prompt",
-      `professional product photo of ${description}, maintain original colors and details, commercial photography quality`,
-    );
-
-    // Säädetään taustan syvyysvaikutelmaa
-    formData.append("original_background_depth", 0.4);
-
+    // Säädä parametreja luovuustason mukaan
+    if (creativity) {
+      // Luovempi moodi
+      formData.append("preserve_original_subject", "0.3"); // Enemmän vapautta muokkaukseen
+      formData.append("original_background_depth", "0.2"); // Vapaampi tausta
+      formData.append(
+        "background_prompt",
+        `${translatedPrompt}, furniture perfectly scaled and fitted to the scene`
+      );
+      formData.append(
+        "negative_prompt",
+        "unrealistic proportions, misaligned furniture, perspective errors, disproportionate scaling, background inconsistencies, furniture appearing too large or too small"
+      );
+    } else {
+      // Konservatiivisempi moodi
+      formData.append("preserve_original_subject", "0.7"); // Tarkempi alkuperäinen
+      formData.append("original_background_depth", "0.8"); // Maltillisempi tausta
+      formData.append(
+        "background_prompt",
+        `${translatedPrompt}, high quality commercial photography style`
+      );
+      formData.append(
+        "negative_prompt",
+        "border artifacts, blurry edges, background residue, seams, distortion, oversaturation, unrealistic lighting"
+      );
+    }
     // Vältetään häiriöitä kuvassa
-    formData.append(
-      "negative_prompt",
-      "border artifacts, frames, blurry edges, background residue, seams, transitions, noise, distortion, blurry edges, oversaturation, unrealistic lighting",
-    );
 
     // Määritellään output-formaatti
     formData.append("output_format", "png");
@@ -163,13 +163,8 @@ const stabilityInpaint = async ({ translatedPrompt, aiMask, description }) => {
           Authorization: `Bearer ${stabilityAiKey}`,
           Accept: "application/json",
         },
-      },
+      }
     );
-
-    console.log("API Response:", {
-      status: aiAnswer.status,
-      data: aiAnswer.data,
-    });
 
     if (aiAnswer.status === 400) {
       throw new Error(`API Error: ${JSON.stringify(aiAnswer.data)}`);
@@ -177,7 +172,7 @@ const stabilityInpaint = async ({ translatedPrompt, aiMask, description }) => {
 
     if (!aiAnswer.data || !aiAnswer.data.id) {
       throw new Error(
-        `No valid ID in response: ${JSON.stringify(aiAnswer.data)}`,
+        `No valid ID in response: ${JSON.stringify(aiAnswer.data)}`
       );
     }
 
@@ -192,8 +187,7 @@ const stabilityInpaint = async ({ translatedPrompt, aiMask, description }) => {
 };
 
 const getImageById = async ({ imageId }) => {
-  console.log("image fetching started");
-  console.log("imageId: " + imageId);
+  console.log("polling image status", imageId);
 
   try {
     const response = await axios.request({
@@ -215,7 +209,7 @@ const getImageById = async ({ imageId }) => {
     } else if (response.status === 400) {
       console.error("API error:", response.data);
       throw new Error(
-        "API-kutsu epäonnistui: " + JSON.stringify(response.data),
+        "API-kutsu epäonnistui: " + JSON.stringify(response.data)
       );
     } else {
       throw new Error("Odottamaton vastaus API:lta");

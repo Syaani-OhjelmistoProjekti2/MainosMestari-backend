@@ -4,7 +4,6 @@ const multer = require("multer");
 const fs = require("fs/promises");
 require("dotenv").config();
 const stabilityai = require("../utils/stabilityai");
-const sharp = require("sharp");
 const path = require("path");
 const { optimizeImage } = require("../helpers/ÏmageOptimizer");
 
@@ -32,6 +31,7 @@ const saveDebugImage = async (buffer, suffix) => {
 adsRouter.post("/image", upload.single("img"), async (req, res) => {
   const imgBuffer = req.file.buffer;
   const prompt = req.body.prompt || "";
+  const creativity = JSON.parse(req.body.creativity);
 
   try {
     console.log("Original image type:", req.file.mimetype);
@@ -41,11 +41,10 @@ adsRouter.post("/image", upload.single("img"), async (req, res) => {
     const resizedBuffer = await optimizeImage(imgBuffer);
     await saveDebugImage(resizedBuffer, "resized");
 
-    // Suoritetaan API-kutsut rinnakkain
     const [translatedPrompt, description, aiMask] = await Promise.allSettled([
       prompt ? openAi.translatePrompt({ prompt }) : Promise.resolve(""),
-      openAi.describeImg2({ imgBuffer }),
-      stabilityai.stabilitymask({ resizedBuffer }), // Otettu kommentti pois
+      openAi.describeImg({ imgBuffer }),
+      stabilityai.stabilitymask({ resizedBuffer }),
     ]);
 
     const results = {
@@ -55,23 +54,17 @@ adsRouter.post("/image", upload.single("img"), async (req, res) => {
       aiMask: aiMask.status === "fulfilled" ? aiMask.value : null,
     };
 
-    console.log("API Results:", {
-      promptStatus: translatedPrompt.status,
-      descriptionStatus: description.status,
-      maskStatus: aiMask.status,
-    });
-
     if (!results.aiMask) {
       throw new Error(`Failed to process image mask: ${aiMask.reason}`);
     }
 
-    // Tallennetaan maski debuggausta varten
     await saveDebugImage(results.aiMask, "mask");
-    // Suoritetaan InPaint operaatio
+
     const stabilityimgId = await stabilityai.stabilityInpaint({
       translatedPrompt: results.translatedPrompt,
       aiMask: results.aiMask,
       description: results.description,
+      creativity: creativity,
     });
 
     res.json({
@@ -139,77 +132,6 @@ adsRouter.post("/generateFinAdText", async (req, res) => {
     console.error("Error processing translation:", error);
     // Send a 500 error response if translation processing fails
     res.status(500).json({ error: "prompt translation processing failed" });
-  }
-});
-
-adsRouter.post("/getadtext", upload.single("img"), async (req, res) => {
-  console.log("Post method request: /getadtext");
-
-  const imgBuffer = req.file.buffer;
-  const viewPoints = req.body.viewPoints;
-  console.log(viewPoints);
-  try {
-    const description = await openAi.describeImg({ imgBuffer });
-    const adText = await openAi.createAdText({ description, viewPoints });
-    res.json({ adText: adText.content });
-  } catch (error) {
-    console.error("Error processing image:", error);
-    res.status(500).json({ error: "Image processing failed" });
-  }
-});
-
-// POST metodi openAi:n dall-E 2 käyttöön !!Removed from forntend!!
-adsRouter.post("/dall2image", upload.single("img"), async (req, res) => {
-  try {
-    // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
-    const imgPath = req.filename;
-    const prompt = req.body.prompt;
-
-    // Kutsutaan OpenAI:ta kuvan luomiseksi käyttäjän syöttämän promptin ja kuvatiedoston polun perusteella
-    const aiAnswer = await openAi.openAiImg({ prompt, imgPath });
-
-    // Lähetetään OpenAI:n vastaus asiakkaalle JSON-muodossa
-    res.json(aiAnswer);
-  } catch (error) {
-    // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
-    console.error("Error processing image:", error);
-    res.status(500).json({ error: "Image processing failed" });
-  } finally {
-    // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
-    try {
-      await fs.unlinkSync(`controllers/uploads/${req.filename}`);
-    } catch (unlinkError) {
-      console.error("Error removing image file:", unlinkError);
-    }
-  }
-});
-
-// POST metodi openAi:n dall-E 3 käyttöön !!Removed from forntend!!
-adsRouter.post("/dall3image", upload.single("img"), async (req, res) => {
-  try {
-    // Tallennetaan ladatun kuvatiedoston nimi (imgPath) ja käyttäjän syöttämä prompt
-    const imgPath = req.filename;
-    const userPrompt = req.body.prompt;
-
-    // Kutsutaan OpenAI:ta kuvaustiedon saamiseksi ladatusta kuvasta
-    const description = await openAi.describeImg({ imgPath });
-
-    // Kutsutaan OpenAI:ta uuden kuvan luomiseksi käyttäjän syöttämän promptin ja kuvauksen perusteella
-    const aiAnswer = await openAi.openAiNewImg({ userPrompt, description });
-
-    // Lähetetään OpenAI:n vastaus asiakkaalle JSON-muodossa
-    res.json(aiAnswer);
-  } catch (error) {
-    // Käsitellään virhe ja lähetetään virheilmoitus vastauksena
-    console.error("Error processing image:", error);
-    res.status(500).json({ error: "Image processing failed" });
-  } finally {
-    // Poista ladattu kuva palvelimelta riippumatta siitä, onnistuiko prosessi tai ei
-    try {
-      await fs.unlinkSync(`controllers/uploads/${req.filename}`);
-    } catch (unlinkError) {
-      console.error("Error removing image file:", unlinkError);
-    }
   }
 });
 
