@@ -33,7 +33,6 @@ const describeImg = async ({ imgBuffer }) => {
 };
 
 const createAdText = async ({ description, viewPoints }) => {
-  console.log("addText generation started");
   const adText = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
@@ -48,7 +47,6 @@ const createAdText = async ({ description, viewPoints }) => {
 };
 
 const translatePrompt = async ({ prompt }) => {
-  console.log("translation operation started");
   const newPrompt = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [

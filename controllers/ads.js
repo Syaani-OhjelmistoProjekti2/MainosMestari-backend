@@ -101,10 +101,8 @@ adsRouter.post("/getimage", upload.single(), async (req, res) => {
 });
 
 adsRouter.post("/translate", async (req, res) => {
-  console.log("Post method request: /translate");
   const prompt = req.body.prompt;
   try {
-    console.log(prompt);
     const newPrompt = await openAi.translatePrompt({ prompt });
     res.json({ newPrompt });
   } catch (error) {
@@ -118,7 +116,6 @@ adsRouter.post("/translate", async (req, res) => {
 adsRouter.post("/generateFinAdText", async (req, res) => {
   const { prompt, options } = req.body;
   try {
-    console.log(prompt);
     const generatedAdText = await openAi.generateFinAdText({ prompt, options });
     res.json({ generatedAdText });
   } catch (error) {
