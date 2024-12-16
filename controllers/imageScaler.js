@@ -7,7 +7,6 @@ const router = express.Router();
 router.post("/scale", async (req, res) => {
   try {
     const { imageData, platform, format } = req.body;
-
     if (!imageData) {
       return res.status(400).json({ error: "Missing image data" });
     }
@@ -24,8 +23,8 @@ router.post("/scale", async (req, res) => {
       // Käytä sharp-kirjastoa kuvan tietojen hakemiseen
       const { width, height } = await sharp(buffer).metadata();
       const aspectRatio = width / height;
-
       let resizeHeight;
+
       if (config.height === "auto") {
         resizeHeight = Math.round(config.width / aspectRatio);
       } else {
@@ -37,10 +36,13 @@ router.post("/scale", async (req, res) => {
           fit: config.fit,
           position: "center",
           background: { r: 255, g: 255, b: 255, alpha: 0 },
-          withoutEnlargement: true,
+          withoutEnlargement: false,
+          withoutReduction: false,
+          kernel: "lanczos3",
         })
+        .png({ quality: 100 })
         .toBuffer();
-
+      const scaledMetadata = await sharp(scaledImage).metadata();
       res.json({
         scaledImage: `data:image/png;base64,${scaledImage.toString("base64")}`,
       });
