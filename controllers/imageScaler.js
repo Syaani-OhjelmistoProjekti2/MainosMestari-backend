@@ -23,13 +23,8 @@ router.post("/scale", async (req, res) => {
       // Käytä sharp-kirjastoa kuvan tietojen hakemiseen
       const { width, height } = await sharp(buffer).metadata();
       const aspectRatio = width / height;
-      let resizeHeight;
 
-      if (config.height === "auto") {
-        resizeHeight = Math.round(config.width / aspectRatio);
-      } else {
-        resizeHeight = config.height;
-      }
+      let resizeHeight = config.height;
 
       const scaledImage = await sharp(buffer)
         .resize(config.width, resizeHeight, {
@@ -42,7 +37,7 @@ router.post("/scale", async (req, res) => {
         })
         .png({ quality: 100 })
         .toBuffer();
-      const scaledMetadata = await sharp(scaledImage).metadata();
+
       res.json({
         scaledImage: `data:image/png;base64,${scaledImage.toString("base64")}`,
       });
