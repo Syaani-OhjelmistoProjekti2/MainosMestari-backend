@@ -32,7 +32,6 @@ adsRouter.post("/image", upload.single("img"), async (req, res) => {
   const imgBuffer = req.file.buffer;
   const prompt = req.body.prompt || "";
   const creativity = JSON.parse(req.body.creativity);
-
   try {
     // await saveDebugImage(req.file.buffer, "original");
 
@@ -72,9 +71,30 @@ adsRouter.post("/image", upload.single("img"), async (req, res) => {
     });
   } catch (error) {
     console.error("Error processing image:", error);
+
+    // Tarkistetaan onko kyseessä Stability AI:n virhe
+    if (error.response?.data?.errors) {
+      return res.status(400).json({
+        error: "Stability AI error",
+        details: error.response.data.errors[0],
+        type: "stability_ai_error",
+      });
+    }
+
+    // Tarkista onko virhe maskin prosessoinnissa
+    if (error.message.includes("Failed to process image mask")) {
+      return res.status(400).json({
+        error: "Image processing error",
+        details: error.message,
+        type: "mask_processing_error",
+      });
+    }
+
+    // Muut virheet
     res.status(500).json({
       error: "Image processing failed",
       details: error.message,
+      type: "unknown_error",
     });
   }
 });
