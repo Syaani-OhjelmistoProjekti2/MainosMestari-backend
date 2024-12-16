@@ -23506,7 +23506,6 @@ function Xb() {
       k.jsx("div", {
         className:
           "fixed inset-0 w-full h-full bg-cover bg-center bg-no-repeat -z-10 bg-fixed",
-        style: { backgroundImage: 'url("/beautiful-blue-002.jpeg")' },
       }),
       k.jsxs("div", {
         className: "absolute inset-0 w-full min-h-screen overflow-auto",
