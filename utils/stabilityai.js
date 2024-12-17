@@ -116,10 +116,6 @@ const stabilityInpaint = async ({
     if (!translatedPrompt) {
       throw new Error("Background prompt is required");
     }
-    formData.append(
-      "foreground_prompt",
-      `${description}, correct scale and proportions, realistic size compared to surroundings`
-    );
 
     // Säädä parametreja luovuustason mukaan
     if (creativity) {
@@ -128,11 +124,11 @@ const stabilityInpaint = async ({
       formData.append("original_background_depth", "0.2"); // Vapaampi tausta
       formData.append(
         "background_prompt",
-        `${translatedPrompt}, furniture perfectly scaled and fitted to the scene`
+        `${translatedPrompt}, furniture naturally integrated into scene`
       );
       formData.append(
         "negative_prompt",
-        "unrealistic proportions, misaligned furniture, perspective errors, disproportionate scaling, background inconsistencies, furniture appearing too large or too small"
+        "disproportionate scaling, unrealistic placement, distorted perspective"
       );
     } else {
       // Konservatiivisempi moodi
@@ -140,11 +136,11 @@ const stabilityInpaint = async ({
       formData.append("original_background_depth", "0.8"); // Maltillisempi tausta
       formData.append(
         "background_prompt",
-        `${translatedPrompt}, high quality commercial photography style`
+        `${translatedPrompt}, high quality commercial photograph`
       );
       formData.append(
         "negative_prompt",
-        "border artifacts, blurry edges, background residue, seams, distortion, oversaturation, unrealistic lighting,disproportionate size, mismatched scale with environment, oversized furniture, undersized furniture, unrealistic placement"
+        "blurry, distorted, unrealistic scale, background bleeding"
       );
     }
     // Vältetään häiriöitä kuvassa
