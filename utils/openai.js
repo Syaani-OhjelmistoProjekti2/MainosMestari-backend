@@ -34,7 +34,7 @@ const describeImg = async ({ imgBuffer }) => {
 
 const createAdText = async ({ description, viewPoints }) => {
   const adText = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-2024-11-20",
     messages: [
       { role: "system", content: "You are advertiser." },
       {
@@ -48,7 +48,7 @@ const createAdText = async ({ description, viewPoints }) => {
 
 const translatePrompt = async ({ prompt }) => {
   const newPrompt = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-2024-11-20",
     messages: [
       { role: "system", content: "You are professional translator." },
       {
@@ -64,7 +64,7 @@ const generateFinAdText = async ({ prompt, options }) => {
   const userPrompt = buildUserPrompt({ prompt, options });
 
   const newPrompt = await openai.chat.completions.create({
-    model: "gpt-4",
+    model: "gpt-4o-2024-11-20",
     messages: [
       {
         role: "system",
