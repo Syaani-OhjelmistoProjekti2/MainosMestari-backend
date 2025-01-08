@@ -68,3 +68,7 @@ oc get imagestream mainosmestari
 ## Lisätietoja
 
 Tarkemmat ohjeet ja dokumentaatio löytyy [Rahti dokumentaatiosta](https://docs.csc.fi/cloud/rahti2/).
+
+## Lisenssi
+
+License - katso [LICENSE](LICENSE) tiedosto lisätietoja varten.
