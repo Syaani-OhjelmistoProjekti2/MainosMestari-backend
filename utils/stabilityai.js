@@ -6,7 +6,7 @@ const stabilityAiKey = process.env.STABILITY_KEY_API;
 
 if (!stabilityAiKey) {
   throw new Error(
-    "STABILITY_KEY_API environment variable is not set. Please check your .env file."
+    "STABILITY_KEY_API environment variable is not set. Please check your .env file.",
   );
 }
 
@@ -28,7 +28,7 @@ const stabilityimg = async ({ newPrompt, aiMask }) => {
         Authorization: `Bearer ${stabilityAiKey}`,
         Accept: "image/*",
       },
-    }
+    },
   );
 
   return aiAnswer;
@@ -59,7 +59,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
           Authorization: `Bearer ${stabilityAiKey}`,
           Accept: "image/*",
         },
-      }
+      },
     );
 
     // Jos vastaus ei ole onnistunut, käsitellään virhe
@@ -80,7 +80,7 @@ const stabilitymask = async ({ resizedBuffer }) => {
   } catch (error) {
     if (error.response) {
       const errorData = error.response.headers["content-type"]?.includes(
-        "application/json"
+        "application/json",
       )
         ? JSON.parse(new TextDecoder().decode(error.response.data))
         : new TextDecoder().decode(error.response.data);
@@ -124,11 +124,11 @@ const stabilityInpaint = async ({
       formData.append("original_background_depth", "0.2"); // Vapaampi tausta
       formData.append(
         "background_prompt",
-        `${translatedPrompt}, furniture naturally integrated into scene`
+        `${translatedPrompt}, furniture naturally integrated into scene`,
       );
       formData.append(
         "negative_prompt",
-        "disproportionate scaling, unrealistic placement, distorted perspective"
+        "disproportionate scaling, unrealistic placement, distorted perspective",
       );
     } else {
       // Konservatiivisempi moodi
@@ -136,11 +136,11 @@ const stabilityInpaint = async ({
       formData.append("original_background_depth", "0.8"); // Maltillisempi tausta
       formData.append(
         "background_prompt",
-        `${translatedPrompt}, high quality commercial photograph`
+        `${translatedPrompt}, high quality commercial photograph`,
       );
       formData.append(
         "negative_prompt",
-        "blurry, distorted, unrealistic scale, background bleeding"
+        "blurry, distorted, unrealistic scale, background bleeding",
       );
     }
     // Vältetään häiriöitä kuvassa
@@ -157,7 +157,7 @@ const stabilityInpaint = async ({
           Authorization: `Bearer ${stabilityAiKey}`,
           Accept: "application/json",
         },
-      }
+      },
     );
 
     if (aiAnswer.status === 400) {
@@ -166,7 +166,7 @@ const stabilityInpaint = async ({
 
     if (!aiAnswer.data || !aiAnswer.data.id) {
       throw new Error(
-        `No valid ID in response: ${JSON.stringify(aiAnswer.data)}`
+        `No valid ID in response: ${JSON.stringify(aiAnswer.data)}`,
       );
     }
 
@@ -199,7 +199,7 @@ const getImageById = async ({ imageId }) => {
     } else if (response.status === 400) {
       console.error("API error:", response.data);
       throw new Error(
-        "API-kutsu epäonnistui: " + JSON.stringify(response.data)
+        "API-kutsu epäonnistui: " + JSON.stringify(response.data),
       );
     } else {
       throw new Error("Odottamaton vastaus API:lta");
